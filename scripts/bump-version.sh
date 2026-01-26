@@ -228,3 +228,7 @@ ensure_gh
 info "Creating GitHub release v${next}..."
 gh release create "v${next}" "$DIST_DIR"/onyx_*.tar.gz --latest --notes "Release v${next}"
 info "Done. Version: v${next}"
+
+# Clean up local dist artifacts to avoid lingering ignored binaries
+rm -rf "$DIST_DIR"
+info "Cleaned dist/ artifacts"
