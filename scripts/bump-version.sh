@@ -155,6 +155,10 @@ sha_linux_arm64=$(shasum -a 256 "$DIST_DIR/onyx_linux_arm64.tar.gz" | awk '{prin
 
 if [[ -f "$FORMULA_FILE" ]]; then
   perl -0777 -pe "s/version \"[^\"]+\"/version \"${next}\"/;
+                   s#releases/download/v[^/]+/onyx_darwin_amd64.tar.gz#releases/download/v${next}/onyx_darwin_amd64.tar.gz#;
+                   s#releases/download/v[^/]+/onyx_darwin_arm64.tar.gz#releases/download/v${next}/onyx_darwin_arm64.tar.gz#;
+                   s#releases/download/v[^/]+/onyx_linux_amd64.tar.gz#releases/download/v${next}/onyx_linux_amd64.tar.gz#;
+                   s#releases/download/v[^/]+/onyx_linux_arm64.tar.gz#releases/download/v${next}/onyx_linux_arm64.tar.gz#;
                    s/onyx_darwin_amd64\\.tar\\.gz\"\\n\\s*sha256 \"[^\"]+\"/onyx_darwin_amd64.tar.gz\"\\n      sha256 \"${sha_darwin_amd64}\"/;
                    s/onyx_darwin_arm64\\.tar\\.gz\"\\n\\s*sha256 \"[^\"]+\"/onyx_darwin_arm64.tar.gz\"\\n      sha256 \"${sha_darwin_arm64}\"/;
                    s/onyx_linux_amd64\\.tar\\.gz\"\\n\\s*sha256 \"[^\"]+\"/onyx_linux_amd64.tar.gz\"\\n      sha256 \"${sha_linux_amd64}\"/;
