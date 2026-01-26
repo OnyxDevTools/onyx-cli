@@ -170,7 +170,8 @@ echo "Build artifacts:"
 echo
 
 info "Committing and tagging (main repo)..."
-git add "$VERSION_FILE"
+# version.go lives under cmd/onyx/, which is ignored in .gitignore; force-add to stage it.
+git add -f "$VERSION_FILE"
 git commit -m "release v${next}"
 git tag "v${next}"
 git push origin HEAD --tags
