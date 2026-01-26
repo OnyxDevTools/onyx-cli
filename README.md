@@ -79,9 +79,17 @@ The script will:
 
 3) Smoke test:
 ```
-brew untap OnyxDevTools/onyx-cli || true
+brew uninstall onyx-cli
+brew untap OnyxDevTools/onyx-cli
 brew tap OnyxDevTools/onyx-cli
 brew install onyx-cli
+onyx version
+```
+
+3) Upgrade flow
+```
+brew update
+brew upgrade onyx-cli
 onyx version
 ```
 
