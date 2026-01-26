@@ -49,21 +49,13 @@ install -m 0755 onyx /usr/local/bin/onyx   # or another dir on PATH
 
 ### Homebrew (macOS)
 
-1) Tap (once):
+Standard (public tap, no SSH needed):
 ```
 brew tap OnyxDevTools/onyx-cli
-```
-
-2) Install:
-```
 brew install onyx
-```
-(You can also run `brew install OnyxDevTools/onyx-cli/onyx` explicitly.)
-
-3) Verify:
-```
 onyx version
 ```
+If you ever get prompted for credentials, the tap likely isn’t public yet—publish the tap repo (`OnyxDevTools/homebrew-onyx-cli`) and retry.
 
 ### Releasing (maintainers)
 
@@ -87,10 +79,9 @@ gh release create vX.Y.Z dist/onyx_*.tar.gz --latest --notes "Release vX.Y.Z"
 ```
 The installer script will pick up `latest` automatically.
 
-4) Update Homebrew formula (in this repo, for the tap):
+4) Update/push Homebrew tap:
    - Ensure macOS tarballs are attached to the GitHub release.
-   - Update `Formula/onyx.rb` URLs and sha256 values (use `shasum -a 256 dist/onyx_darwin_*.tar.gz`).
-   - Commit/push, or copy the formula into the tap repo `OnyxDevTools/homebrew-onyx` and push there.
+   - Commit/push the updated formula in `homebrew-onyx-cli/Formula/onyx.rb` to the tap repo `OnyxDevTools/homebrew-onyx-cli`.
 
 ### Command tables (compact)
 

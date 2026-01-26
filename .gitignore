@@ -4,6 +4,7 @@ onyx/
 src/main/kotlin/onyx/
 src/main/java/onyx/
 dist/
+homebrew-onyx-cli/
 onyx/types.ts
 onyx-kotlin/
 onyx/*.py

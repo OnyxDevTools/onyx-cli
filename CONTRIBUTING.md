@@ -7,6 +7,17 @@ Thanks for helping shape the cross-platform `onyx` CLI. This repo is early and T
 ## Prerequisites
 - Go 1.24.x (ensure `go version` and `go env GOROOT` point to the same 1.24 toolchain).
 - Git.
+- (For releases) GitHub CLI `gh` (the bump script will auto-install if missing).
+- (For Homebrew) Clone the tap repo alongside this repo:
+  ```
+  git clone https://github.com/OnyxDevTools/homebrew-onyx-cli.git
+  ```
+  You should end up with:
+  ```
+  onyx-cli/
+    homebrew-onyx-cli/
+      Formula/onyx.rb
+  ```
 
 ## Quickstart
 ```bash
@@ -32,3 +43,18 @@ The checked-in man page lives at `docs/man/man1/onyx.1` (mdoc) and should render
 - Cobra is used for the command tree; new commands live under `cmd/onyx/cmd`.
 - Default CLI behavior must mirror the TypeScript SDK for schema/codegen until expanded otherwise.
 - Avoid breaking changes to the documented command surface without discussion.
+
+## Release flow (maintainers)
+1) Ensure working tree is clean and branch is up to date.
+2) Run the bump script (auto-bumps, builds, updates tap formula, tags, pushes, creates GitHub release, attaches tarballs):
+   ```
+   scripts/bump-version.sh patch   # or minor/major
+   ```
+   It expects the tap repo at `./homebrew-onyx-cli`. If it’s missing, the script will warn and you must push the formula manually.
+3) Verify the GitHub release `vX.Y.Z` has tarballs and that the tap repo `homebrew-onyx-cli` is pushed.
+4) Test install:
+   ```
+   brew tap OnyxDevTools/onyx-cli
+   brew install onyx
+   onyx version
+   ```

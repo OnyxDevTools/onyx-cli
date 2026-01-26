@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION_FILE="$ROOT/cmd/onyx/cmd/version.go"
-FORMULA_FILE="$ROOT/Formula/onyx.rb"
+TAP_DIR="$ROOT/homebrew-onyx-cli"
+FORMULA_FILE="$TAP_DIR/Formula/onyx.rb"
 DIST_DIR="$ROOT/dist"
 
 usage() {
@@ -13,8 +14,9 @@ Usage: scripts/bump-version.sh [major|minor|patch]
 Actions (always performed):
   - bump cmd/onyx/cmd/version.go
   - build darwin/linux (amd64, arm64) tarballs into dist/
-  - update Formula/onyx.rb with version + shas
-  - git add/commit/tag/push
+  - update tap formula homebrew-onyx-cli/Formula/onyx.rb with version + shas
+  - commit/tag/push main repo (version bump only)
+  - commit/push tap repo formula
   - create GitHub release with attached tarballs (installs gh CLI if missing)
 
 Environment:
@@ -29,23 +31,56 @@ fi
 bwarn() { printf "WARNING: %s\n" "$*" >&2; }
 info() { printf "==> %s\n" "$*" >&2; }
 
+ensure_clean_and_synced() {
+  local repo="$1"
+  local label="$2"
+  local ahead behind untracked_dirty tracked_dirty
+
+  # Make sure upstream info is current
+  git -C "$repo" fetch --tags --prune --quiet || true
+
+  tracked_dirty=0
+  untracked_dirty=0
+  if ! git -C "$repo" diff-index --quiet HEAD --; then
+    tracked_dirty=1
+  fi
+  if [[ -n "$(git -C "$repo" ls-files --others --exclude-standard)" ]]; then
+    untracked_dirty=1
+  fi
+  if (( tracked_dirty || untracked_dirty )); then
+    bwarn "$label has uncommitted or untracked changes. Please commit or stash before releasing."
+    git -C "$repo" status -sb
+    exit 1
+  fi
+  ahead=$(cd "$repo" && git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
+  behind=$(cd "$repo" && git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
+  if [[ "$behind" != "0" ]]; then
+    bwarn "$label is behind upstream. Pull/merge before releasing."
+    exit 1
+  fi
+  if [[ "$ahead" != "0" ]]; then
+    bwarn "$label has $ahead unpushed commit(s). Push or reset before releasing."
+    exit 1
+  fi
+}
+
 bump="${1:-${BUMP:-}}"
+
+# Guardrails (ensure clean + synced before any prompts)
+ensure_clean_and_synced "$ROOT" "Main repo"
+if [[ -d "$TAP_DIR/.git" ]]; then
+  ensure_clean_and_synced "$TAP_DIR" "Tap repo ($TAP_DIR)"
+fi
+
 if [[ -z "$bump" ]]; then
   read -rp "Bump type (major/minor/patch) [patch]: " bump
   bump="${bump:-patch}"
 fi
 
-# Guardrails
-status=$(cd "$ROOT" && git status --porcelain)
-if [[ -n "$status" ]]; then
-  bwarn "Working tree not clean. Commit or stash first."
-  exit 1
-fi
-ahead=$(cd "$ROOT" && git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
-behind=$(cd "$ROOT" && git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
-if [[ "$behind" != "0" ]]; then
-  bwarn "Local branch is behind upstream. Pull/merge before releasing."
-  exit 1
+# Guardrails (ensure clean + synced before proceeding)
+ensure_clean_and_synced "$ROOT" "Main repo"
+if [[ -d "$TAP_DIR/.git" ]]; then
+  ensure_clean_and_synced "$TAP_DIR" "Tap repo ($TAP_DIR)"
 fi
 
 current=$(grep 'Version = "' "$VERSION_FILE" | sed -E 's/.*"([^"]+)".*/\1/')
@@ -110,12 +145,22 @@ echo "Build artifacts:"
 (cd "$DIST_DIR" && ls -1 onyx_*.tar.gz)
 echo
 
-info "Committing and tagging..."
-git add "$VERSION_FILE" "$FORMULA_FILE" "$DIST_DIR"
+info "Committing and tagging (main repo)..."
+git add "$VERSION_FILE"
 git commit -m "release v${next}"
 git tag "v${next}"
 git push origin HEAD --tags
-info "Pushed v${next}"
+info "Pushed main repo v${next}"
+
+# Commit/push tap repo formula
+if [[ -d "$TAP_DIR/.git" ]]; then
+  info "Updating tap repo at $TAP_DIR..."
+  git -C "$TAP_DIR" add "$FORMULA_FILE"
+  git -C "$TAP_DIR" commit -m "onyx ${next}" || true
+  git -C "$TAP_DIR" push || true
+else
+  bwarn "Tap repo not found at $TAP_DIR; please push formula manually."
+fi
 
 ensure_gh() {
   if command -v gh >/dev/null 2>&1; then
