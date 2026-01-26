@@ -14,7 +14,7 @@ Usage: scripts/bump-version.sh [major|minor|patch]
 Actions (always performed):
   - bump cmd/onyx/cmd/version.go
   - build darwin/linux (amd64, arm64) tarballs into dist/
-  - update tap formula homebrew-onyx-cli/Formula/onyx.rb with version + shas
+  - update tap formula homebrew-onyx-cli/Formula/onyx-cli.rb with version + shas
   - commit/tag/push main repo (version bump only)
   - commit/push tap repo formula
   - create GitHub release with attached tarballs (installs gh CLI if missing)
@@ -48,9 +48,15 @@ ensure_clean_and_synced() {
     untracked_dirty=1
   fi
   if (( tracked_dirty || untracked_dirty )); then
-    bwarn "$label has uncommitted or untracked changes. Please commit or stash before releasing."
+    info "$label has uncommitted or untracked changes."
     git -C "$repo" status -sb
-    exit 1
+    read -rp "Enter commit message for $label (or leave empty to abort): " msg
+    if [[ -z "$msg" ]]; then
+      bwarn "Aborting: no commit message provided."
+      exit 1
+    fi
+    git -C "$repo" add -A
+    git -C "$repo" commit -m "$msg"
   fi
   ahead=$(cd "$repo" && git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
   behind=$(cd "$repo" && git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)

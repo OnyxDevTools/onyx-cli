@@ -26,17 +26,17 @@ func RenderKotlinTypes(schemaJSON []byte, pkg string) (string, error) {
 		b.WriteString("\n\n")
 	}
 
-	needsInstant := false
+	needsDate := false
 	for _, ent := range parsed.Entities {
 		for _, a := range ent.Attributes {
 			if isTimeType(a.Type) {
-				needsInstant = true
+				needsDate = true
 				break
 			}
 		}
 	}
-	if needsInstant {
-		b.WriteString("import java.time.Instant\n\n")
+	if needsDate {
+		b.WriteString("import java.util.Date\n\n")
 	}
 
 	for _, ent := range parsed.Entities {
@@ -100,7 +100,7 @@ func mapKotlinType(schemaType string, nullable bool) string {
 	case "bool", "boolean":
 		base = "Boolean"
 	case "date", "datetime", "timestamp", "timestamptz":
-		base = "Instant"
+		base = "Date"
 	case "json", "object", "record", "map", "embeddedobject":
 		base = "Any"
 	default:

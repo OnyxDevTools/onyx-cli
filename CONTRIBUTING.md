@@ -18,6 +18,6 @@ man -M docs/man onyx
 ```
    scripts/bump-version.sh   # will prompt for patch/minor/major
    brew tap OnyxDevTools/onyx-cli
-   brew install onyx
+  brew install onyx-cli
    onyx version
 ```

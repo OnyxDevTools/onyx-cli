@@ -61,15 +61,15 @@ func renderJavaClass(name string, attrs []struct {
 		b.WriteString(pkg)
 		b.WriteString(";\n\n")
 	}
-	importInstant := false
+	importDate := false
 	for _, a := range attrs {
 		if isJavaTimeType(a.Type) {
-			importInstant = true
+			importDate = true
 			break
 		}
 	}
-	if importInstant {
-		b.WriteString("import java.time.Instant;\n")
+	if importDate {
+		b.WriteString("import java.util.Date;\n")
 	}
 	b.WriteString("\n")
 	b.WriteString("public class ")
@@ -108,7 +108,7 @@ func mapJavaType(schemaType string, nullable bool) string {
 	case "bool", "boolean":
 		return "Boolean"
 	case "date", "datetime", "timestamp", "timestamptz":
-		return "Instant"
+		return "Date"
 	case "json", "object", "record", "map", "embeddedobject":
 		return "Object"
 	default:

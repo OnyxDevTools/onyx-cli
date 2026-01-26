@@ -55,33 +55,35 @@ brew tap OnyxDevTools/onyx-cli
 brew install onyx-cli
 onyx version
 ```
+Note: The token `onyx` is already used by the macOS OnyX cask. Install the CLI with `onyx-cli` as shown above.
+
 If you ever get prompted for credentials, the tap likely isn’t public yet—publish the tap repo (`OnyxDevTools/homebrew-onyx-cli`) and retry.
 
 ### Releasing (maintainers)
 
-1) Bump version and build artifacts:
+1) Bump version, build artifacts, update tap formula, tag, push, and create GitHub release:
 ```
 scripts/bump-version.sh patch   # or minor/major
 ```
-This updates `cmd/onyx/cmd/version.go`, builds tarballs into `dist/` for darwin/linux (amd64/arm64), and prints next steps.
+The script will:
+- Ensure main and tap repos are clean and in sync
+- Bump `cmd/onyx/cmd/version.go`
+- Build darwin/linux (amd64/arm64) tarballs into `dist/`
+- Update `homebrew-onyx-cli/Formula/onyx-cli.rb` with version + shas
+- Commit/tag/push main and tap repos
+- Create the GitHub release and attach the tarballs
 
-2) Commit and tag:
-```
-git add cmd/onyx/cmd/version.go dist
-git commit -m "release vX.Y.Z"
-git tag vX.Y.Z
-git push origin HEAD --tags
-```
+2) Verify release assets:
+   - GitHub release `vX.Y.Z` exists with four tarballs.
+   - Tap repo `OnyxDevTools/homebrew-onyx-cli` has the updated formula.
 
-3) Create GitHub release (example using gh CLI):
+3) Smoke test:
 ```
-gh release create vX.Y.Z dist/onyx_*.tar.gz --latest --notes "Release vX.Y.Z"
+brew untap OnyxDevTools/onyx-cli || true
+brew tap OnyxDevTools/onyx-cli
+brew install onyx-cli
+onyx version
 ```
-The installer script will pick up `latest` automatically.
-
-4) Update/push Homebrew tap:
-   - Ensure macOS tarballs are attached to the GitHub release.
-   - Commit/push the updated formula in `homebrew-onyx-cli/Formula/onyx.rb` to the tap repo `OnyxDevTools/homebrew-onyx-cli`.
 
 ### Command tables (compact)
 
