@@ -1,0 +1,104 @@
+.Dd January 25, 2026
+.Dt ONYX 1
+.Os
+.Sh NAME
+.Nm onyx
+.Nd Onyx Cloud Database command-line interface
+.Sh SYNOPSIS
+.Nm
+.Op Fl h
+.Nm
+.Cm info
+.Nm
+.Cm schema
+.Nm
+.Cm init
+.Nm
+.Cm gen
+.Nm
+.Cm version
+.Sh DESCRIPTION
+.Nm
+is the cross-platform CLI for Onyx Cloud Database (onyx.dev). It is being built to mirror the TypeScript SDK schema and code generation behaviors while delivering a single binary for macOS, Linux, and Windows.
+.Pp
+The current scope provides TypeScript-first workflows and must match the TypeScript SDK semantics for schema commands and credential/config resolution.
+.Sh COMMANDS
+.Bl -tag -width "schema publish" -compact
+.It Cm gen
+Generate code from an Onyx schema (TypeScript, Python, Go). If no language flag is provided, the CLI falls back to the config key \fBcodegenLanguage\fP or the env var \fBONYX_CODEGEN_LANGUAGE\fP. TypeScript output matches onyx-gen (interfaces per entity, schema mapping type + const, tables enum). Python output mirrors onyx-database-python (models.py/tables.py/schema.py). Go output mirrors onyx-gen-go (common.go plus per-table typed clients with query helpers, updates structs, paging iterators, and cascades).
+.It Cm schema
+Schema utilities (download, validate, diff, publish).
+.It Cm info
+Show resolved schema file presence and resolved credential/config sources (mirrors TypeScript CLI semantics).
+.It Cm init
+Scaffold a Go-friendly go:generate entrypoint (`generate.go`) that calls `onyx gen --go`.
+.It Cm version
+Show the CLI version string. Values can be overridden at build time using Go ldflags, for example:
+.Pp
+\fBgo build -ldflags "-X github.com/OnyxDevTools/onyx-cli/cmd/onyx/cmd.Version=1.0.0 -X github.com/OnyxDevTools/onyx-cli/cmd/onyx/cmd.Commit=abcdef -X github.com/OnyxDevTools/onyx-cli/cmd/onyx/cmd.Date=2026-01-25"\fP
+.El
+.Pp
+Additional subcommands (schema and code generation) will be added to mirror the TypeScript SDK helpers `onyx-schema` and `onyx-gen`.
+.Sh OPTIONS
+.Bl -tag -width "-h" -compact
+.It Fl h , Fl -help
+Show help for the root command.
+.El
+.Sh ENVIRONMENT
+The CLI resolves credentials and configuration in this order (TypeScript canonical):
+.Pp
+\fIexplicit config\fP \[->] \fIenvironment variables\fP \[->] \fBONYX_CONFIG_PATH\fP file \[->] project config file \[->] home profile.
+.Pp
+Environment variables:
+.Bl -tag -width "ONYX_DATABASE_API_SECRET" -compact
+.It Ev ONYX_DATABASE_ID
+.It Ev ONYX_DATABASE_BASE_URL
+.It Ev ONYX_DATABASE_API_KEY
+.It Ev ONYX_DATABASE_API_SECRET
+.It Ev ONYX_AI_BASE_URL
+Optional.
+.It Ev ONYX_DEFAULT_MODEL
+Optional.
+.It Ev ONYX_CODEGEN_LANGUAGE
+Optional. When set to a supported language and no language flag is provided, `onyx gen` defaults accordingly. Accepted values: \"typescript\"/\"ts\", \"java\", \"kotlin\"/\"kt\", \"python\"/\"py\", \"go\"/\"golang\".
+.El
+.Pp
+Defaults when unspecified:
+.Bl -tag -width "Default model" -compact
+.It Base URL
+\fBhttps://api.onyx.dev\fP
+.It AI Base URL
+\fBhttps://ai.onyx.dev\fP
+.It Default model
+\fBonyx\fP
+.El
+.Sh FILES
+If \fBONYX_CONFIG_PATH\fP is unset, the CLI searches for JSON config in order:
+.Bl -tag -width "~/.onyx/onyx-database-<databaseId>.json" -compact
+.It Pa ./onyx-database-<databaseId>.json
+.It Pa ./onyx-database.json
+.It Pa ./config/onyx-database-<databaseId>.json
+.It Pa ./config/onyx-database.json
+.It Pa ~/.onyx/onyx-database-<databaseId>.json
+.It Pa ~/.onyx/onyx-database.json
+.It Pa ~/onyx-database.json
+.El
+.Pp
+Default schema file path:
+.Pa ./onyx.schema.json
+.Pp
+Schema config files are also searched in:
+.Bl -tag -compact -width "./config/onyx-database-<databaseId>.json"
+.It Pa ./config/onyx-database-<databaseId>.json
+.It Pa ./config/onyx-database.json
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Nm
+returns 0 on success and non-zero on errors.
+.Sh SEE ALSO
+.Xr onyx 1
+.Pp
+Project README (repository root) for command surface and usage examples.
+.Sh AUTHORS
+Onyx DevTools.

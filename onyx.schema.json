@@ -1,0 +1,385 @@
+{
+  "databaseId": "bbabca0e-82ce-11f0-0000-a2ce78b61b6a",
+  "entities": [
+    {
+      "name": "AuditLog",
+      "identifier": {
+        "name": "id",
+        "generator": "None",
+        "type": "String"
+      },
+      "attributes": [
+        {
+          "name": "action",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "actorId",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "changes",
+          "type": "EmbeddedObject",
+          "isNullable": true
+        },
+        {
+          "name": "dateTime",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "errorCode",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "errorMessage",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "metadata",
+          "type": "EmbeddedObject",
+          "isNullable": true
+        },
+        {
+          "name": "requestId",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "resource",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "status",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "targetId",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "tenantId",
+          "type": "String",
+          "isNullable": true
+        }
+      ]
+    },
+    {
+      "name": "Permission",
+      "identifier": {
+        "name": "id",
+        "generator": "None",
+        "type": "String"
+      },
+      "attributes": [
+        {
+          "name": "createdAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "deletedAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "description",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "Timestamp",
+          "isNullable": true
+        }
+      ]
+    },
+    {
+      "name": "Role",
+      "identifier": {
+        "name": "id",
+        "generator": "None",
+        "type": "String"
+      },
+      "attributes": [
+        {
+          "name": "createdAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "deletedAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "description",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "isSystem",
+          "type": "Boolean",
+          "isNullable": true
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "Timestamp",
+          "isNullable": true
+        }
+      ],
+      "resolvers": [
+        {
+          "name": "permissions",
+          "resolver": "db.from(\"Permission\")\n  .where(\n    inOp(\"id\", \n        db.from(\"RolePermission\")\n            .where(eq(\"roleId\", this.id))\n            .list()\n            .values('permissionId')\n    )\n)\n .list()"
+        },
+        {
+          "name": "rolePermissions",
+          "resolver": "db.from(\"RolePermission\")\n .where(eq(\"roleId\", this.id))\n .list()"
+        }
+      ]
+    },
+    {
+      "name": "RolePermission",
+      "identifier": {
+        "name": "id",
+        "generator": "None",
+        "type": "String"
+      },
+      "attributes": [
+        {
+          "name": "createdAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "permissionId",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "roleId",
+          "type": "String",
+          "isNullable": true
+        }
+      ],
+      "resolvers": [
+        {
+          "name": "permission",
+          "resolver": "db.from(\"Permission\")\n .where(eq(\"id\", this.permissionId))\n .firstOrNull()"
+        },
+        {
+          "name": "role",
+          "resolver": "db.from(\"Role\")\n .where(eq(\"id\", this.roleId))\n .firstOrNull()"
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "identifier": {
+        "name": "id",
+        "generator": "None",
+        "type": "String"
+      },
+      "attributes": [
+        {
+          "name": "createdAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "deletedAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "email",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "isActive",
+          "type": "Boolean",
+          "isNullable": true
+        },
+        {
+          "name": "lastLoginAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "username",
+          "type": "String",
+          "isNullable": true
+        }
+      ],
+      "resolvers": [
+        {
+          "name": "profile",
+          "resolver": "db.from(\"UserProfile\")\n .where(eq(\"userId\", this.id))\n .firstOrNull()"
+        },
+        {
+          "name": "roles",
+          "resolver": "db.from(\"Role\")\n  .where(\n    inOp(\"id\", \n        db.from(\"UserRole\")\n            .where(eq(\"userId\", this.id))\n            .list()\n            .values('roleId')\n    )\n)\n .list()"
+        },
+        {
+          "name": "userRoles",
+          "resolver": "db.from(\"UserRole\")\n  .where(eq(\"userId\", this.id))\n  .list()"
+        }
+      ]
+    },
+    {
+      "name": "UserProfile",
+      "identifier": {
+        "name": "id",
+        "generator": "None",
+        "type": "String"
+      },
+      "attributes": [
+        {
+          "name": "address",
+          "type": "EmbeddedObject",
+          "isNullable": true
+        },
+        {
+          "name": "age",
+          "type": "Int",
+          "isNullable": true
+        },
+        {
+          "name": "avatarUrl",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "bio",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "createdAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "deletedAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "firstName",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "lastName",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "phone",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "userId",
+          "type": "String",
+          "isNullable": true
+        }
+      ]
+    },
+    {
+      "name": "UserRole",
+      "identifier": {
+        "name": "id",
+        "generator": "None",
+        "type": "String"
+      },
+      "attributes": [
+        {
+          "name": "createdAt",
+          "type": "Timestamp",
+          "isNullable": true
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "roleId",
+          "type": "String",
+          "isNullable": true
+        },
+        {
+          "name": "userId",
+          "type": "String",
+          "isNullable": true
+        }
+      ],
+      "resolvers": [
+        {
+          "name": "role",
+          "resolver": "db.from(\"Role\")\n .where(eq(\"id\", this.roleId))\n .list()"
+        }
+      ]
+    }
+  ]
+}

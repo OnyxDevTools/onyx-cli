@@ -1,0 +1,24 @@
+# Generated outputs
+gen/
+onyx/
+src/main/kotlin/onyx/
+src/main/java/onyx/
+dist/
+onyx/types.ts
+onyx-kotlin/
+onyx/*.py
+onyx/__pycache__/
+bin/
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Editor / OS junk
+.DS_Store
+.idea/
+.vscode/
+*~
