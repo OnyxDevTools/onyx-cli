@@ -24,7 +24,7 @@ type Table struct {
 }
 
 // RenderGoCommon generates common.go with helpers, tables map, resolvers map, DB wrapper.
-func RenderGoCommon(schemaJSON []byte, outDir, pkg string, overwrite bool) error {
+func RenderGoCommon(schemaJSON []byte, outDir, pkg string, overwrite bool, pointerFields bool) error {
 	tables, resolvers, err := parseTables(schemaJSON)
 	if err != nil {
 		return err
@@ -162,7 +162,7 @@ func RenderGoCommon(schemaJSON []byte, outDir, pkg string, overwrite bool) error
 }
 
 // RenderGoTables emits per-table files (typed models, updates, clients, paging).
-func RenderGoTables(schemaJSON []byte, outDir, pkg string, overwrite bool) error {
+func RenderGoTables(schemaJSON []byte, outDir, pkg string, overwrite bool, pointerFields bool) error {
 	tables, _, err := parseTables(schemaJSON)
 	if err != nil {
 		return err
@@ -177,7 +177,7 @@ func RenderGoTables(schemaJSON []byte, outDir, pkg string, overwrite bool) error
 				return fmt.Errorf("%s exists (use --overwrite)", file)
 			}
 		}
-		content := renderTable(t, pkg)
+		content := renderTable(t, pkg, pointerFields)
 		if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 			return err
 		}
@@ -269,7 +269,7 @@ func parseTables(schemaJSON []byte) ([]Table, map[string][]string, error) {
 	return tables, resolvers, nil
 }
 
-func renderTable(table Table, pkg string) string {
+func renderTable(table Table, pkg string, pointerFields bool) string {
 	var buf bytes.Buffer
 	now := time.Now().UTC().Format(time.RFC3339)
 	typeName := exportName(table.Name)
@@ -300,7 +300,7 @@ func renderTable(table Table, pkg string) string {
 	buf.WriteString("type " + typeName + " struct {\n")
 	ordered := orderFields(table)
 	for _, f := range ordered {
-		goType := mapGoType(f.Type, f.IsNullable)
+		goType := mapGoType(f.Type, f.IsNullable, pointerFields)
 		buf.WriteString("\t" + exportName(f.Name) + " " + goType + " `json:\"" + f.Name + ",omitempty\"`\n")
 	}
 	for _, r := range table.Resolvers {
@@ -313,7 +313,7 @@ func renderTable(table Table, pkg string) string {
 	buf.WriteString("type " + updates + " struct { values map[string]any }\n\n")
 	buf.WriteString("func New" + updates + "() *" + updates + " { return &" + updates + "{values: make(map[string]any)} }\n\n")
 	for _, f := range ordered {
-		goType := mapGoType(f.Type, f.IsNullable)
+		goType := mapGoType(f.Type, f.IsNullable, pointerFields)
 		buf.WriteString("func (u *" + updates + ") Set" + exportName(f.Name) + "(v " + goType + ") *" + updates + " {\n")
 		buf.WriteString("\tif u.values == nil { u.values = make(map[string]any) }\n")
 		buf.WriteString("\tu.values[\"" + f.Name + "\"] = v\n\treturn u\n}\n\n")
@@ -465,24 +465,39 @@ func orderFields(table Table) []Field {
 	return out
 }
 
-func mapGoType(schemaType string, nullable bool) string {
+func mapGoType(schemaType string, nullable bool, pointer bool) string {
 	t := strings.ToLower(strings.TrimSpace(schemaType))
 	var base string
 	switch t {
 	case "string", "text", "uuid":
-		base = "*string"
+		base = "string"
 	case "bool", "boolean":
-		base = "*bool"
+		base = "bool"
 	case "int", "integer", "long", "short", "byte":
-		base = "*int64"
+		base = "int64"
 	case "float", "double", "decimal", "number":
-		base = "*float64"
+		base = "float64"
 	case "date", "datetime", "timestamp", "timestamptz":
-		base = "*time.Time"
+		base = "time.Time"
 	case "json", "object", "record", "map", "embeddedobject":
 		base = "any"
 	default:
 		base = "any"
+	}
+	if pointer {
+		// use pointer forms when requested
+		switch base {
+		case "string":
+			return "*string"
+		case "bool":
+			return "*bool"
+		case "int64":
+			return "*int64"
+		case "float64":
+			return "*float64"
+		case "time.Time":
+			return "*time.Time"
+		}
 	}
 	return base
 }
