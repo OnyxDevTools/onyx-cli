@@ -34,7 +34,7 @@ info() { printf "==> %s\n" "$*" >&2; }
 ensure_clean_and_synced() {
   local repo="$1"
   local label="$2"
-  local ahead behind untracked_dirty tracked_dirty
+  local local_ahead remote_ahead untracked_dirty tracked_dirty
 
   # Make sure upstream info is current
   git -C "$repo" fetch --tags --prune --quiet || true
@@ -58,23 +58,25 @@ ensure_clean_and_synced() {
     git -C "$repo" add -A
     git -C "$repo" commit -m "$msg"
   fi
-  ahead=$(cd "$repo" && git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
-  behind=$(cd "$repo" && git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
-  if [[ "$behind" != "0" ]]; then
-    info "$label is behind upstream by $behind commit(s); attempting fast-forward pull..."
+  # remote_ahead: commits on upstream not in local; local_ahead: commits on local not in upstream
+  remote_ahead=$(cd "$repo" && git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
+  local_ahead=$(cd "$repo" && git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
+
+  if [[ "$remote_ahead" != "0" ]]; then
+    info "$label is behind upstream by $remote_ahead commit(s); attempting fast-forward pull..."
     if ! git -C "$repo" pull --rebase --autostash --quiet; then
       bwarn "Auto-pull failed. Resolve manually and retry."
       exit 1
     fi
-    ahead=$(cd "$repo" && git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
-    behind=$(cd "$repo" && git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
-    if [[ "$behind" != "0" ]]; then
+    remote_ahead=$(cd "$repo" && git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
+    local_ahead=$(cd "$repo" && git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
+    if [[ "$remote_ahead" != "0" ]]; then
       bwarn "$label is still behind after pull. Resolve manually."
       exit 1
     fi
   fi
-  if [[ "$ahead" != "0" ]]; then
-    info "$label has $ahead unpushed commit(s); pushing..."
+  if [[ "$local_ahead" != "0" ]]; then
+    info "$label has $local_ahead unpushed commit(s); pushing..."
     if ! git -C "$repo" push; then
       bwarn "Auto-push failed. Resolve manually and retry."
       exit 1
