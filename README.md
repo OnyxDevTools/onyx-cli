@@ -52,7 +52,7 @@ install -m 0755 onyx /usr/local/bin/onyx   # or another dir on PATH
 Standard (public tap, no SSH needed):
 ```
 brew tap OnyxDevTools/onyx-cli
-brew install onyx
+brew install onyx-cli
 onyx version
 ```
 If you ever get prompted for credentials, the tap likely isn’t public yet—publish the tap repo (`OnyxDevTools/homebrew-onyx-cli`) and retry.

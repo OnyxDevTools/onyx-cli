@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION_FILE="$ROOT/cmd/onyx/cmd/version.go"
 TAP_DIR="$ROOT/homebrew-onyx-cli"
-FORMULA_FILE="$TAP_DIR/Formula/onyx.rb"
+FORMULA_FILE="$TAP_DIR/Formula/onyx-cli.rb"
 DIST_DIR="$ROOT/dist"
 
 usage() {
@@ -130,11 +130,15 @@ done
 echo "Computing sha256..."
 sha_darwin_amd64=$(shasum -a 256 "$DIST_DIR/onyx_darwin_amd64.tar.gz" | awk '{print $1}')
 sha_darwin_arm64=$(shasum -a 256 "$DIST_DIR/onyx_darwin_arm64.tar.gz" | awk '{print $1}')
+sha_linux_amd64=$(shasum -a 256 "$DIST_DIR/onyx_linux_amd64.tar.gz" | awk '{print $1}')
+sha_linux_arm64=$(shasum -a 256 "$DIST_DIR/onyx_linux_arm64.tar.gz" | awk '{print $1}')
 
 if [[ -f "$FORMULA_FILE" ]]; then
   perl -0777 -pe "s/version \"[^\"]+\"/version \"${next}\"/;
                    s/onyx_darwin_amd64\\.tar\\.gz\"\\n\\s*sha256 \"[^\"]+\"/onyx_darwin_amd64.tar.gz\"\\n      sha256 \"${sha_darwin_amd64}\"/;
-                   s/onyx_darwin_arm64\\.tar\\.gz\"\\n\\s*sha256 \"[^\"]+\"/onyx_darwin_arm64.tar.gz\"\\n      sha256 \"${sha_darwin_arm64}\"/" \
+                   s/onyx_darwin_arm64\\.tar\\.gz\"\\n\\s*sha256 \"[^\"]+\"/onyx_darwin_arm64.tar.gz\"\\n      sha256 \"${sha_darwin_arm64}\"/;
+                   s/onyx_linux_amd64\\.tar\\.gz\"\\n\\s*sha256 \"[^\"]+\"/onyx_linux_amd64.tar.gz\"\\n      sha256 \"${sha_linux_amd64}\"/;
+                   s/onyx_linux_arm64\\.tar\\.gz\"\\n\\s*sha256 \"[^\"]+\"/onyx_linux_arm64.tar.gz\"\\n      sha256 \"${sha_linux_arm64}\"/" \
     "$FORMULA_FILE" > "$FORMULA_FILE.tmp"
   mv "$FORMULA_FILE.tmp" "$FORMULA_FILE"
   echo "Updated $FORMULA_FILE"

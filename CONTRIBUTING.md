@@ -4,21 +4,6 @@
 
 Thanks for helping shape the cross-platform `onyx` CLI. This repo is early and TypeScript-parity is the guiding constraint.
 
-## Prerequisites
-- Go 1.24.x (ensure `go version` and `go env GOROOT` point to the same 1.24 toolchain).
-- Git.
-- (For releases) GitHub CLI `gh` (the bump script will auto-install if missing).
-- (For Homebrew) Clone the tap repo alongside this repo:
-  ```
-  git clone https://github.com/OnyxDevTools/homebrew-onyx-cli.git
-  ```
-  You should end up with:
-  ```
-  onyx-cli/
-    homebrew-onyx-cli/
-      Formula/onyx.rb
-  ```
-
 ## Quickstart
 ```bash
 go mod tidy
@@ -26,35 +11,13 @@ go build -o ./bin/onyx ./cmd/onyx
 ./bin/onyx --help
 ./bin/onyx help version
 man -M docs/man onyx
-
-# show version (ldflags can override Version/Commit/Date)
 ./bin/onyx version
 ```
 
-The checked-in man page lives at `docs/man/man1/onyx.1` (mdoc) and should render cleanly with `mandoc`. On macOS/BSD `man` does not support `-l`; instead use `man -M docs/man onyx` or `MANPATH=$(pwd)/docs/man man onyx`.
-## Contribution flow
-1. Open/assign an issue for non-trivial work.
-2. Keep changes minimal and scoped to a single concern.
-3. Add or update docs/tests alongside code where applicable.
-4. Run `go test ./...` (once tests exist) and `go build ./cmd/onyx` before opening a PR.
-5. Use clear commit messages; avoid force-pushing shared branches.
-
-## Coding notes
-- Cobra is used for the command tree; new commands live under `cmd/onyx/cmd`.
-- Default CLI behavior must mirror the TypeScript SDK for schema/codegen until expanded otherwise.
-- Avoid breaking changes to the documented command surface without discussion.
-
-## Release flow (maintainers)
-1) Ensure working tree is clean and branch is up to date.
-2) Run the bump script (auto-bumps, builds, updates tap formula, tags, pushes, creates GitHub release, attaches tarballs):
-   ```
-   scripts/bump-version.sh patch   # or minor/major
-   ```
-   It expects the tap repo at `./homebrew-onyx-cli`. If it’s missing, the script will warn and you must push the formula manually.
-3) Verify the GitHub release `vX.Y.Z` has tarballs and that the tap repo `homebrew-onyx-cli` is pushed.
-4) Test install:
-   ```
+## Release flow
+```
+   scripts/bump-version.sh   # will prompt for patch/minor/major
    brew tap OnyxDevTools/onyx-cli
    brew install onyx
    onyx version
-   ```
+```
