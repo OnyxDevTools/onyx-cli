@@ -61,12 +61,24 @@ ensure_clean_and_synced() {
   ahead=$(cd "$repo" && git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
   behind=$(cd "$repo" && git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
   if [[ "$behind" != "0" ]]; then
-    bwarn "$label is behind upstream. Pull/merge before releasing."
-    exit 1
+    info "$label is behind upstream by $behind commit(s); attempting fast-forward pull..."
+    if ! git -C "$repo" pull --rebase --autostash --quiet; then
+      bwarn "Auto-pull failed. Resolve manually and retry."
+      exit 1
+    fi
+    ahead=$(cd "$repo" && git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
+    behind=$(cd "$repo" && git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
+    if [[ "$behind" != "0" ]]; then
+      bwarn "$label is still behind after pull. Resolve manually."
+      exit 1
+    fi
   fi
   if [[ "$ahead" != "0" ]]; then
-    bwarn "$label has $ahead unpushed commit(s). Push or reset before releasing."
-    exit 1
+    info "$label has $ahead unpushed commit(s); pushing..."
+    if ! git -C "$repo" push; then
+      bwarn "Auto-push failed. Resolve manually and retry."
+      exit 1
+    fi
   fi
 }
 
