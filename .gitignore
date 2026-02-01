@@ -1,6 +1,6 @@
 # Generated outputs
 gen/
-onyx/
+/onyx/
 src/main/kotlin/onyx/
 src/main/java/onyx/
 dist/

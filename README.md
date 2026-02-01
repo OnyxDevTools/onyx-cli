@@ -78,7 +78,7 @@ Shared credential flags (all schema/info commands): `--database-id`, `--base-url
 
 | Command | Flags (core) | Behavior / defaults |
 |---------|--------------|---------------------|
-| `onyx schema get [file]` | `--tables a,b` (stdout), `--print` (stdout) | Default file `./onyx.schema.json`. Writes file unless tables/print is used. |
+| `onyx schema get [file]` (alias: `onyx schema [file]`) | `--tables a,b` (stdout), `--print` (stdout), `--out <file>` | Default file `./onyx.schema.json`. `[file]` or `--out` override the path. Writes file unless tables/print is used. |
 | `onyx schema publish [file]` | *(none)* | Default file `./onyx.schema.json`. Validates first; publishes only if valid. |
 | `onyx schema validate [file]` | *(none)* | Default file `./onyx.schema.json`. Exits non-zero on validation errors. |
 | `onyx schema diff [file]` | *(none)* | Default file `./onyx.schema.json`. Prints YAML diff vs API schema. |
@@ -121,7 +121,7 @@ Defaults (when unspecified):
 
 ## Schema file conventions
 - Default schema file path: `./onyx.schema.json`
-- `onyx schema get` overwrites the default file unless output is redirected via `--print`/`--tables` printing behavior.
+- `onyx schema get` (or `onyx schema`) overwrites the default file unless output is redirected via `--print`/`--tables` printing behavior. Use `[file]` or `--out` to choose a different path.
 
 ## Canonical references
 - TypeScript SDK (canonical CLI + credential semantics): https://github.com/OnyxDevTools/onyx-database

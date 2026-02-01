@@ -27,7 +27,24 @@ The current scope provides TypeScript-first workflows and must match the TypeScr
 .It Cm gen
 Generate code from an Onyx schema (TypeScript, Python, Go). If no language flag is provided, the CLI falls back to the config key \fBcodegenLanguage\fP or the env var \fBONYX_CODEGEN_LANGUAGE\fP. TypeScript output matches onyx-gen (interfaces per entity, schema mapping type + const, tables enum). Python output mirrors onyx-database-python (models.py/tables.py/schema.py). Go output mirrors onyx-gen-go (common.go plus per-table typed clients with query helpers, updates structs, paging iterators, and cascades).
 .It Cm schema
-Schema utilities (download, validate, diff, publish).
+Schema utilities (download, validate, diff, publish). Invoking
+.Nm
+.Cm schema
+with no subcommand behaves like
+.Nm
+.Cm schema\ get .
+.It Cm "schema get"
+Download the latest schema from the API. Defaults to writing
+.Pa ./onyx.schema.json ;
+use an optional
+.Ar file
+argument or
+.Fl -out Ns = Ns Ar path
+to override. When
+.Fl -tables
+is provided or
+.Fl -print
+is set, the schema is printed to stdout instead of writing a file.
 .It Cm info
 Show resolved schema file presence and resolved credential/config sources (mirrors TypeScript CLI semantics).
 .It Cm init

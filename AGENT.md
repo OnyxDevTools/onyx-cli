@@ -22,6 +22,10 @@ The initial delivery is **TypeScript-first** and must be compatible with the cur
 - `onyx schema diff`
 - `onyx schema publish`
 
+### Binary targets (important)
+- `cmd/onyx`: production binary **onyx** that gets shipped in releases. Change user-visible behavior here.
+- `cmd/localonyx`: dev-only shim for quick local testing. Keep it in sync with `cmd/onyx`, but don’t rely on it being distributed.
+
 ## Hard requirements
 ### 1) Config + credential resolution parity (TypeScript canonical)
 This CLI must use the same credential/config chain logic as the TypeScript SDK:
