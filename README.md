@@ -7,8 +7,6 @@ A cross-platform CLI for **Onyx Cloud Database** (onyx.dev) focused on:
 - **Schema management** (get / validate / diff / publish)
 - **Code generation** (typescript, python, go, kotlin)
 
-> Status: **WIP / not released yet**. This repository is being built incrementally. Packaging (Homebrew, etc) will come after the core CLI behavior is stable.
-
 ## Why this exists
 The TypeScript SDK currently provides helper CLIs (`onyx gen` and `onyx schema`). This repo consolidates that developer workflow into a single, globally-installable binary:
 
