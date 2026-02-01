@@ -118,9 +118,9 @@ min=${BASH_REMATCH[2]}
 pat=${BASH_REMATCH[3]}
 
 case "$bump" in
-  major) ((maj++)); min=0; pat=0 ;;
-  minor) ((min++)); pat=0 ;;
-  patch) ((pat++)) ;;
+  major) ((maj+=1)); min=0; pat=0 ;;
+  minor) ((min+=1)); pat=0 ;;
+  patch) ((pat+=1)) ;;
   *) echo "Unknown bump '$bump' (use major|minor|patch)" >&2; exit 1 ;;
 esac
 
