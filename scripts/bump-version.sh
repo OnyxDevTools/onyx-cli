@@ -59,8 +59,13 @@ ensure_clean_and_synced() {
     git -C "$repo" commit -m "$msg"
   fi
   # remote_ahead: commits on upstream not in local; local_ahead: commits on local not in upstream
-  remote_ahead=$(cd "$repo" && git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
-  local_ahead=$(cd "$repo" && git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
+  if git -C "$repo" rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
+    remote_ahead=$(cd "$repo" && git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
+    local_ahead=$(cd "$repo" && git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
+  else
+    remote_ahead=0
+    local_ahead=0
+  fi
 
   if [[ "$remote_ahead" != "0" ]]; then
     info "$label is behind upstream by $remote_ahead commit(s); attempting fast-forward pull..."
