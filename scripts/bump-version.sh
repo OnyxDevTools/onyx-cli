@@ -246,7 +246,11 @@ ensure_gh_auth() {
     printf "%s" "$GH_TOKEN" | gh auth login --with-token >/dev/null
     return 0
   fi
-  bwarn "gh is not authenticated. Set GH_TOKEN or run 'gh auth login' then rerun this script."
+  info "gh is not authenticated; launching interactive login..."
+  if gh auth login --hostname github.com --web; then
+    return 0
+  fi
+  bwarn "gh auth login failed; please retry."
   exit 1
 }
 
