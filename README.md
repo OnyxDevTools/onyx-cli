@@ -5,29 +5,20 @@
 A cross-platform CLI for **Onyx Cloud Database** (onyx.dev) focused on:
 
 - **Schema management** (get / validate / diff / publish)
-- **Code generation** (TypeScript-first)
+- **Code generation** (typescript, python, go, kotlin)
 
 > Status: **WIP / not released yet**. This repository is being built incrementally. Packaging (Homebrew, etc) will come after the core CLI behavior is stable.
 
 ## Why this exists
-The TypeScript SDK currently provides helper CLIs (`onyx-gen` and `onyx-schema`). This repo consolidates that developer workflow into a single, globally-installable binary:
+The TypeScript SDK currently provides helper CLIs (`onyx gen` and `onyx schema`). This repo consolidates that developer workflow into a single, globally-installable binary:
 
 - One executable: `onyx`
 - Consistent subcommands across platforms and languages (eventually)
 - Minimal friction for new projects
 
-## Current scope (TypeScript-first)
-The initial scope is intentionally narrow (TypeScript is the canonical reference; Python and Go generation are implemented to mirror their SDK helpers):
-
-1. Implement `onyx schema ...` commands with behavior matching the current TypeScript CLI semantics.
-2. Implement `onyx gen` code generation with TypeScript parity and matching outputs for the published Python (`onyx-database-python`) and Go (`onyx-gen-go`) generators.
-3. Use the **same credential/config resolution chain** as the TypeScript SDK.
-
-Schema commands and the credential/config chain must exactly match the current TypeScript SDK behavior; the TS SDK is the canonical reference.
-
 ## CLI usage
 
-### Install (preview)
+### Install
 
 Until official packages are published, you can install a tagged release tarball:
 
@@ -36,15 +27,6 @@ curl -fsSL https://raw.githubusercontent.com/OnyxDevTools/onyx-cli/main/scripts/
 
 # or specific version
 curl -fsSL https://raw.githubusercontent.com/OnyxDevTools/onyx-cli/main/scripts/install.sh | bash -s -- v0.1.0
-```
-
-Flags/env:
-- `BINDIR=/usr/local/bin` to change install location (falls back to `~/.local/bin`).
-- `ONYX_TAG=v0.0.0` to pin a specific release (default: latest).
-Manual direct install (if you already downloaded a tarball):
-```
-tar -xzvf onyx_<os>_<arch>.tar.gz
-install -m 0755 onyx /usr/local/bin/onyx   # or another dir on PATH
 ```
 
 ### Homebrew (macOS)
@@ -59,51 +41,30 @@ Note: The token `onyx` is already used by the macOS OnyX cask. Install the CLI w
 
 If you ever get prompted for credentials, the tap likely isn’t public yet—publish the tap repo (`OnyxDevTools/homebrew-onyx-cli`) and retry.
 
-### Releasing (maintainers)
-
-1) Bump version, build artifacts, update tap formula, tag, push, and create GitHub release:
-```
-scripts/bump-version.sh patch   # or minor/major
-```
-The script will:
-- Ensure main and tap repos are clean and in sync
-- Bump `cmd/onyx/cmd/version.go`
-- Build darwin/linux (amd64/arm64) tarballs into `dist/`
-- Update `homebrew-onyx-cli/Formula/onyx-cli.rb` with version + shas
-- Commit/tag/push main and tap repos
-- Create the GitHub release and attach the tarballs
-
-2) Verify release assets:
-   - GitHub release `vX.Y.Z` exists with four tarballs.
-   - Tap repo `OnyxDevTools/homebrew-onyx-cli` has the updated formula.
-
-3) Smoke test:
-```
-brew uninstall onyx-cli
-brew untap OnyxDevTools/onyx-cli
-brew tap OnyxDevTools/onyx-cli
-brew install onyx-cli
-onyx version
-```
-
-3) Upgrade flow
+### Upgrade flow
 ```
 brew update
 brew upgrade onyx-cli
 onyx version
 ```
 
-### Command tables (compact)
+### Commands
+
+**Version**
+
+| Command | Flags (core) | Behavior / defaults |
+|---------|--------------|---------------------|
+| `onyx version` | *(none)* | Prints the CLI version string. |
 
 **Info**
 
 | Command | Flags (core) | Behavior / defaults |
 |---------|--------------|---------------------|
-| `onyx info` | *(schema/info flags below)* | Shows resolved config sources, config path, connection check (Schema API ping). |
+| `onyx info` | *(none)* | Shows resolved config sources, config path, connection check (Schema API ping). |
 
 Shared credential flags (all schema/info commands): `--database-id`, `--base-url`, `--api-key`, `--api-secret`, `--ai-base-url`, `--default-model`, `--config` (overrides `ONYX_CONFIG_PATH` and search chain).
 
-**Init (Go helper)**
+**Init (Only helpful for GO SDK)**
 
 | Command | Flags (core) | Behavior / defaults |
 |---------|--------------|---------------------|
@@ -151,7 +112,7 @@ Defaults (when unspecified):
 ### Config file search order
 1) If `--config` is provided, that path is used (errors if unreadable).  
 2) Else if `ONYX_CONFIG_PATH` is set, that path is used (errors if unreadable).  
-3) Otherwise search JSON configs in this order:
+3) Otherwise, the CLI searches for the first readable JSON config in this order (paths with `<databaseId>` are only used if the database ID was already provided via flags or env vars):
    1. `./onyx-database-<databaseId>.json`
    2. `./onyx-database.json`
    3. `./config/onyx-database-<databaseId>.json`
