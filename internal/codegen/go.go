@@ -203,6 +203,7 @@ func parseTables(schemaJSON []byte) ([]Table, map[string][]string, error) {
 				Type       string `json:"type"`
 				PrimaryKey bool   `json:"primaryKey"`
 				IsNullable *bool  `json:"isNullable"`
+				Nullable   *bool  `json:"nullable"`
 			} `json:"fields"`
 			Resolvers []struct {
 				Name string `json:"name"`
@@ -218,11 +219,15 @@ func parseTables(schemaJSON []byte) ([]Table, map[string][]string, error) {
 		}
 		tbl := Table{Name: t.Name}
 		for _, f := range t.Fields {
-			nullable := true
-			if f.PrimaryKey {
-				nullable = false
+			// default to non-nullable unless explicitly marked or primary key overrides
+			nullable := false
+			if f.Nullable != nil {
+				nullable = *f.Nullable
 			} else if f.IsNullable != nil {
 				nullable = *f.IsNullable
+			}
+			if f.PrimaryKey {
+				nullable = false
 			}
 			tbl.Fields = append(tbl.Fields, Field{
 				Name:       f.Name,
@@ -348,6 +353,8 @@ func renderTable(table Table, pkg string, pointerFields bool) string {
 	buf.WriteString("\tPage(ctx context.Context, cursor string) (" + pageName + ", error)\n")
 	buf.WriteString("\tPages(ctx context.Context) *" + pageIter + "\n")
 	buf.WriteString("\tPageOfMaps(ctx context.Context, cursor string) (" + pageMapName + ", error)\n")
+	buf.WriteString("\tFirstOrNull(ctx context.Context) (*" + typeName + ", error)\n")
+	buf.WriteString("\tOne(ctx context.Context) (" + typeName + ", error)\n")
 	buf.WriteString("\tUpdate(ctx context.Context) (int, error)\n")
 	buf.WriteString("\tDelete(ctx context.Context) (int, error)\n")
 	buf.WriteString("\tSave(ctx context.Context, item " + typeName + ", cascades ...onyx.CascadeSpec) (" + typeName + ", error)\n")
@@ -399,6 +406,8 @@ func renderTable(table Table, pkg string, pointerFields bool) string {
 
 	buf.WriteString("func (c " + resourceName + ") List(ctx context.Context) ([]" + typeName + ", error) { ctx, done := withContextAndHook(ctx, c.timeout, c.hook, \"list\", Tables." + typeName + "); res := onyx.List(ctx, c.q); var out []" + typeName + "; if err := res.Decode(&out); err != nil { err = fmt.Errorf(\"failed to decode " + typeName + " list: %w\", err); done(err); return nil, err }; done(nil); return out, nil }\n")
 	buf.WriteString("func (c " + resourceName + ") ListMaps(ctx context.Context) ([]map[string]any, error) { ctx, done := withContextAndHook(ctx, c.timeout, c.hook, \"list_maps\", Tables." + typeName + "); res := onyx.List(ctx, c.q); var out []map[string]any; if err := res.Decode(&out); err != nil { err = fmt.Errorf(\"failed to decode " + typeName + " map list: %w\", err); done(err); return nil, err }; done(nil); return out, nil }\n")
+	buf.WriteString("func (c " + resourceName + ") FirstOrNull(ctx context.Context) (*" + typeName + ", error) { limited := c.Limit(1); ctx, done := withContextAndHook(ctx, limited.timeout, limited.hook, \"first_or_null\", Tables." + typeName + "); res := onyx.List(ctx, limited.q); var out []" + typeName + "; if err := res.Decode(&out); err != nil { err = fmt.Errorf(\"failed to decode " + typeLabel + " first_or_null: %w\", err); done(err); return nil, err }; done(nil); if len(out) == 0 { return nil, nil }; return &out[0], nil }\n")
+	buf.WriteString("func (c " + resourceName + ") One(ctx context.Context) (" + typeName + ", error) { limited := c.Limit(2); ctx, done := withContextAndHook(ctx, limited.timeout, limited.hook, \"one\", Tables." + typeName + "); res := onyx.List(ctx, limited.q); var out []" + typeName + "; if err := res.Decode(&out); err != nil { err = fmt.Errorf(\"failed to decode " + typeLabel + " one: %w\", err); done(err); return " + typeName + "{}, err }; done(nil); if len(out) == 0 { return " + typeName + "{}, fmt.Errorf(\"expected one " + typeLabel + ", got 0\") }; if len(out) > 1 { return " + typeName + "{}, fmt.Errorf(\"expected one " + typeLabel + ", got %d\", len(out)) }; return out[0], nil }\n")
 
 	buf.WriteString("func (c " + resourceName + ") Page(ctx context.Context, cursor string) (" + pageName + ", error) { ctx, done := withContextAndHook(ctx, c.timeout, c.hook, \"page\", Tables." + typeName + "); res, err := c.q.Page(ctx, cursor); if err != nil { err = fmt.Errorf(\"failed to page " + typeLabel + ": %w\", err); done(err); return " + pageName + "{}, err }; if res.Items == nil { done(nil); return " + pageName + "{Items: []" + typeName + "{}, NextCursor: res.NextCursor}, nil }; var items []" + typeName + "; if err := decodeList(res.Items, &items); err != nil { err = fmt.Errorf(\"failed to decode " + typeLabel + " page: %w\", err); done(err); return " + pageName + "{}, err }; done(nil); return " + pageName + "{Items: items, NextCursor: res.NextCursor}, nil }\n")
 	buf.WriteString("func (c " + resourceName + ") Pages(ctx context.Context) *" + pageIter + " { return &" + pageIter + "{client: c, ctx: ctx} }\n")
@@ -484,8 +493,9 @@ func mapGoType(schemaType string, nullable bool, pointer bool) string {
 	default:
 		base = "any"
 	}
-	if pointer {
-		// use pointer forms when requested
+	usePointer := pointer || nullable
+	if usePointer {
+		// use pointer forms when requested or when field is nullable
 		switch base {
 		case "string":
 			return "*string"
