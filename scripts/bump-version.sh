@@ -237,6 +237,21 @@ ensure_gh() {
 
 ensure_gh
 
+ensure_gh_auth() {
+  if gh auth status --hostname github.com >/dev/null 2>&1; then
+    return 0
+  fi
+  if [[ -n "${GH_TOKEN:-}" ]]; then
+    info "gh not authenticated; logging in with GH_TOKEN..."
+    printf "%s" "$GH_TOKEN" | gh auth login --with-token >/dev/null
+    return 0
+  fi
+  bwarn "gh is not authenticated. Set GH_TOKEN or run 'gh auth login' then rerun this script."
+  exit 1
+}
+
+ensure_gh_auth
+
 info "Creating GitHub release v${next}..."
 gh release create "v${next}" "$DIST_DIR"/onyx_*.tar.gz --latest --notes "Release v${next}"
 info "Done. Version: v${next}"
