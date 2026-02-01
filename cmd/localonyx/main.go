@@ -347,10 +347,12 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 
 	// validate
 	validate := &cobra.Command{
-		Use:   "validate",
+		Use:   "validate [file]",
 		Short: "Validate local schema against the API",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			localReq, filePath, err := loadLocalSchema(schemaPath)
+			schemaFile := pickSchemaPath(schemaPath, args)
+			localReq, filePath, err := loadLocalSchema(schemaFile)
 			if err != nil {
 				return err
 			}
@@ -376,10 +378,12 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 
 	// diff
 	diff := &cobra.Command{
-		Use:   "diff",
+		Use:   "diff [file]",
 		Short: "Diff API schema vs local schema",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			localReq, filePath, err := loadLocalSchema(schemaPath)
+			schemaFile := pickSchemaPath(schemaPath, args)
+			localReq, filePath, err := loadLocalSchema(schemaFile)
 			if err != nil {
 				return err
 			}
@@ -406,10 +410,12 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 
 	// publish (optional)
 	publishCmd := &cobra.Command{
-		Use:   "publish",
+		Use:   "publish [file]",
 		Short: "Publish local schema to API",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			localReq, _, err := loadLocalSchema(schemaPath)
+			schemaFile := pickSchemaPath(schemaPath, args)
+			localReq, _, err := loadLocalSchema(schemaFile)
 			if err != nil {
 				return err
 			}
@@ -422,24 +428,14 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if rev == nil {
-				return fmt.Errorf("publish failed: empty response from server")
+			if rev == nil || rev.Meta == nil || rev.Meta.RevisionID == "" || rev.Meta.PublishedAt == "" {
+				return fmt.Errorf(
+					"publish failed: server response missing revision metadata (need meta.revisionId and meta.publishedAt). Base URL: %s, database: %s. This usually means the API did not accept the publish; verify you are targeting the right Onyx API and that the server is up to date.",
+					rc.BaseURL.Value, rc.DatabaseID.Value,
+				)
 			}
 
-			revID := "unknown"
-			publishedAt := "unknown"
-			if rev.Meta != nil {
-				if rev.Meta.RevisionID != "" {
-					revID = rev.Meta.RevisionID
-				}
-				if rev.Meta.PublishedAt != "" {
-					publishedAt = rev.Meta.PublishedAt
-				}
-			} else {
-				fmt.Fprintln(cmd.ErrOrStderr(), "warning: publish response missing metadata")
-			}
-
-			fmt.Fprintf(cmd.OutOrStdout(), "Published revision %s at %s\n", revID, publishedAt)
+			fmt.Fprintf(cmd.OutOrStdout(), "Published revision %s at %s\n", rev.Meta.RevisionID, rev.Meta.PublishedAt)
 			return nil
 		},
 	}
@@ -500,9 +496,6 @@ func runSchemaGet(cmd *cobra.Command, cfg *cfgOptions, outPath, tablesCSV string
 }
 
 func loadLocalSchema(path string) (schema.SchemaUpsertRequest, string, error) {
-	if path == "" {
-		path = config.DefaultSchemaPath
-	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return schema.SchemaUpsertRequest{}, path, fmt.Errorf("read schema %s: %w", path, err)
@@ -512,6 +505,18 @@ func loadLocalSchema(path string) (schema.SchemaUpsertRequest, string, error) {
 		return schema.SchemaUpsertRequest{}, path, fmt.Errorf("parse schema %s: %w", path, err)
 	}
 	return req, path, nil
+}
+
+// pickSchemaPath chooses the schema path from a flag or optional positional arg.
+// Positional arg wins, then flag, then default.
+func pickSchemaPath(flagPath string, args []string) string {
+	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+		return args[0]
+	}
+	if flagPath != "" {
+		return flagPath
+	}
+	return config.DefaultSchemaPath
 }
 
 func jsonUnmarshal(data []byte, v any) error {
