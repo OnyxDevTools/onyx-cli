@@ -74,6 +74,20 @@ func resolveCfg(opts *cfgOptions) (config.ResolvedConfig, error) {
 	})
 }
 
+func resolveCfgOrGuide(opts *cfgOptions) (config.ResolvedConfig, error) {
+	rc, err := resolveCfg(opts)
+	if err != nil {
+		return rc, err
+	}
+	if err := rc.Validate(); err != nil {
+		return rc, fmt.Errorf(
+			"Onyx credentials not found (%v).\n\nTo fix:\n  1) Visit https://cloud.onyx.dev > Database > Manage Database > API Keys and create an API key.\n  2) Either download the onyx-database.json config file into your project (or point ONYX_CONFIG_PATH to it),\n     or set these environment variables:\n       - ONYX_DATABASE_ID\n       - ONYX_DATABASE_BASE_URL\n       - ONYX_DATABASE_API_KEY\n       - ONYX_DATABASE_API_SECRET\n",
+			err,
+		)
+	}
+	return rc, nil
+}
+
 // INFO ---------------------------------------------------------------------
 func newInfoCmd(cfg *cfgOptions) *cobra.Command {
 	return &cobra.Command{
@@ -152,6 +166,10 @@ func newGenCmd(cfg *cfgOptions) *cobra.Command {
 		Use:   "gen",
 		Short: "Generate client code from schema (local build)",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if _, err := resolveCfgOrGuide(cfg); err != nil {
+				return err
+			}
+
 			selectedSchema := schemaPath
 			if selectedSchema == "" {
 				selectedSchema = config.DefaultSchemaPath
@@ -336,7 +354,7 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			rc, err := resolveCfg(cfg)
+			rc, err := resolveCfgOrGuide(cfg)
 			if err != nil {
 				return err
 			}
@@ -365,7 +383,7 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			rc, err := resolveCfg(cfg)
+			rc, err := resolveCfgOrGuide(cfg)
 			if err != nil {
 				return err
 			}
@@ -395,7 +413,7 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			rc, err := resolveCfg(cfg)
+			rc, err := resolveCfgOrGuide(cfg)
 			if err != nil {
 				return err
 			}
@@ -404,7 +422,24 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Published revision %s at %s\n", rev.Meta.RevisionID, rev.Meta.PublishedAt)
+			if rev == nil {
+				return fmt.Errorf("publish failed: empty response from server")
+			}
+
+			revID := "unknown"
+			publishedAt := "unknown"
+			if rev.Meta != nil {
+				if rev.Meta.RevisionID != "" {
+					revID = rev.Meta.RevisionID
+				}
+				if rev.Meta.PublishedAt != "" {
+					publishedAt = rev.Meta.PublishedAt
+				}
+			} else {
+				fmt.Fprintln(cmd.ErrOrStderr(), "warning: publish response missing metadata")
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "Published revision %s at %s\n", revID, publishedAt)
 			return nil
 		},
 	}
@@ -416,7 +451,7 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 }
 
 func runSchemaGet(cmd *cobra.Command, cfg *cfgOptions, outPath, tablesCSV string, printOnly bool, args []string) error {
-	rc, err := resolveCfg(cfg)
+	rc, err := resolveCfgOrGuide(cfg)
 	if err != nil {
 		return err
 	}
