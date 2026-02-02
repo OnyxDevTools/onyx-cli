@@ -46,7 +46,7 @@ func TestExampleKotlinE2E(t *testing.T) {
 
 	// Ensure JAVA_HOME set (Homebrew OpenJDK).
 	if os.Getenv("JAVA_HOME") == "" {
-		_ = os.Setenv("JAVA_HOME", "/opt/homebrew/opt/openjdk@21")
+		_ = os.Setenv("JAVA_HOME", "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home")
 	}
 
 	// Run Kotlin example (shim gradlew uses system gradle if installed).
