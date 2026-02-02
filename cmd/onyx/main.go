@@ -206,6 +206,9 @@ func newGenCmd(cfg *cfgOptions) *cobra.Command {
 				if out == "" {
 					out = "./gen/onyx"
 				}
+				if err := ensureDirWritable(out); err != nil {
+					return err
+				}
 				if pkg == "" {
 					pkg = "onyx"
 				}
@@ -230,15 +233,10 @@ func newGenCmd(cfg *cfgOptions) *cobra.Command {
 				}
 				path := out
 				if strings.HasSuffix(path, "/") || strings.HasSuffix(path, string(os.PathSeparator)) {
-					if err := os.MkdirAll(path, 0o755); err != nil {
-						return err
-					}
 					path = filepath.Join(path, "types.ts")
-				} else {
-					dir := filepath.Dir(path)
-					if err := os.MkdirAll(dir, 0o755); err != nil {
-						return err
-					}
+				}
+				if err := ensureParentDirWritable(path); err != nil {
+					return err
 				}
 				if err := os.WriteFile(path, []byte(ts), 0o644); err != nil {
 					return err
@@ -249,6 +247,9 @@ func newGenCmd(cfg *cfgOptions) *cobra.Command {
 				if out == "" {
 					out = "./onyx"
 				}
+				if err := ensureDirWritable(out); err != nil {
+					return err
+				}
 				if err := codegen.RenderPython(data, out, true); err != nil {
 					return err
 				}
@@ -257,6 +258,9 @@ func newGenCmd(cfg *cfgOptions) *cobra.Command {
 			if langJava {
 				if out == "" {
 					out = "./java"
+				}
+				if err := ensureDirWritable(out); err != nil {
+					return err
 				}
 				if pkg == "" {
 					pkg = "onyx"
@@ -269,6 +273,9 @@ func newGenCmd(cfg *cfgOptions) *cobra.Command {
 			if langKt {
 				if out == "" {
 					out = "./kotlin"
+				}
+				if err := ensureDirWritable(out); err != nil {
+					return err
 				}
 				if pkg == "" {
 					pkg = "onyx"
@@ -313,6 +320,26 @@ func newGenCmd(cfg *cfgOptions) *cobra.Command {
 	cmd.Flags().BoolVar(&langKt, "kotlin", false, "Generate Kotlin data classes")
 	cmd.Flags().BoolVar(&langKt, "kt", false, "Generate Kotlin data classes (alias)")
 	return cmd
+}
+
+// ensureDirWritable creates the directory if missing; errors if a non-dir exists.
+func ensureDirWritable(dir string) error {
+	info, err := os.Stat(dir)
+	if err == nil {
+		if !info.IsDir() {
+			return fmt.Errorf("%s exists and is not a directory; choose --out pointing to a directory", dir)
+		}
+		return nil
+	}
+	if !os.IsNotExist(err) {
+		return err
+	}
+	return os.MkdirAll(dir, 0o755)
+}
+
+// ensureParentDirWritable ensures the parent directory of a file path exists and is a directory.
+func ensureParentDirWritable(path string) error {
+	return ensureDirWritable(filepath.Dir(path))
 }
 
 // SCHEMA -------------------------------------------------------------------

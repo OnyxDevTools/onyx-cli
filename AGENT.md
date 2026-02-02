@@ -76,7 +76,7 @@ When `ONYX_CONFIG_PATH` is unset, search config files in this order:
 
 ## Engineering guidelines for agents
 - Keep changes tightly scoped to the current task.
-- Do not introduce breaking changes to the agreed CLI surface.
+- Do not introduce breaking changes to the agreed CLI surface (e.g., defaults, flags, outputs, paths). When a change could impact existing users, first add a compatibility guard or opt-in flag and confirm with the requester.
 - Prefer explicit, testable behavior over “magic”.
 - Write error messages that are actionable and include next steps.
 - Ensure commands return non-zero on failures (validation errors, API errors, etc).
