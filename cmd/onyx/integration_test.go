@@ -55,7 +55,7 @@ func TestSchemaPublish(t *testing.T) {
 	workdir := prepareE2EWorkspace(t)
 	runCLI(t, workdir, "schema", "get", "--out", "api/onyx.schema.json")
 	out, _ := runCLI(t, workdir, "schema", "publish", "api/onyx.schema.json")
-	assertOutputContains(t, out, "Published revision")
+	assertOutputContains(t, out, "Schema publish succeeded.")
 }
 
 func TestGenGo(t *testing.T) {

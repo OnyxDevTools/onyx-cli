@@ -444,18 +444,11 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 				warnMissingMeta(cmd, "publish", rc)
 			}
 
-			revID := "unknown"
-			publishedAt := "unknown"
-			if rev != nil && rev.Meta != nil {
-				if rev.Meta.RevisionID != "" {
-					revID = rev.Meta.RevisionID
-				}
-				if rev.Meta.PublishedAt != "" {
-					publishedAt = rev.Meta.PublishedAt
-				}
+			if publish {
+				fmt.Fprintln(cmd.OutOrStdout(), "Schema publish succeeded.")
+			} else {
+				fmt.Fprintln(cmd.OutOrStdout(), "Schema saved (publish flag disabled).")
 			}
-
-			fmt.Fprintf(cmd.OutOrStdout(), "Published revision %s at %s\n", revID, publishedAt)
 			return nil
 		},
 	}
