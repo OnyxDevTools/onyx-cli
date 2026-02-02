@@ -186,8 +186,8 @@ func RenderGoTables(schemaJSON []byte, outDir, pkg string, overwrite bool, point
 }
 
 func parseTables(schemaJSON []byte) ([]Table, map[string][]string, error) {
-	var parsedEntities SchemaParsed
-	if err := json.Unmarshal(schemaJSON, &parsedEntities); err != nil {
+	var parsed SchemaParsed
+	if err := json.Unmarshal(schemaJSON, &parsed); err != nil {
 		return nil, nil, fmt.Errorf("parse schema: %w", err)
 	}
 
@@ -205,6 +205,13 @@ func parseTables(schemaJSON []byte) ([]Table, map[string][]string, error) {
 				IsNullable *bool  `json:"isNullable"`
 				Nullable   *bool  `json:"nullable"`
 			} `json:"fields"`
+			Attributes []struct {
+				Name       string `json:"name"`
+				Type       string `json:"type"`
+				PrimaryKey bool   `json:"primaryKey"`
+				IsNullable *bool  `json:"isNullable"`
+				Nullable   *bool  `json:"nullable"`
+			} `json:"attributes"`
 			Resolvers []struct {
 				Name string `json:"name"`
 			} `json:"resolvers"`
@@ -218,7 +225,11 @@ func parseTables(schemaJSON []byte) ([]Table, map[string][]string, error) {
 			continue
 		}
 		tbl := Table{Name: t.Name}
-		for _, f := range t.Fields {
+		fields := t.Fields
+		if len(fields) == 0 {
+			fields = t.Attributes
+		}
+		for _, f := range fields {
 			// default to non-nullable unless explicitly marked or primary key overrides
 			nullable := false
 			if f.Nullable != nil {
@@ -246,9 +257,13 @@ func parseTables(schemaJSON []byte) ([]Table, map[string][]string, error) {
 		tables = append(tables, tbl)
 	}
 
-	// Fallback: entities-based schema.
+	// Fallback: tables/entities-based schema.
 	if len(tables) == 0 {
-		for _, e := range parsedEntities.Entities {
+		ents := parsed.Tables
+		if len(ents) == 0 {
+			ents = parsed.Entities
+		}
+		for _, e := range ents {
 			if e.Name == "" {
 				continue
 			}
@@ -495,7 +510,7 @@ func mapGoType(schemaType string, nullable bool, pointer bool) string {
 	default:
 		base = "any"
 	}
-	usePointer := pointer || nullable
+	usePointer := pointer && nullable
 	if usePointer {
 		// use pointer forms when requested or when field is nullable
 		switch base {

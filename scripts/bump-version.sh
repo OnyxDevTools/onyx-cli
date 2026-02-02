@@ -7,6 +7,14 @@ TAP_DIR="$ROOT/homebrew-onyx-cli"
 FORMULA_FILE="$TAP_DIR/Formula/onyx-cli.rb"
 DIST_DIR="$ROOT/dist"
 
+run_integration_tests() {
+  info "Running integration tests (ONYX_E2E=1)..."
+  if ! (cd "$ROOT/cmd/onyx" && ONYX_E2E=1 go test ./...); then
+    echo "Integration tests failed. Aborting version bump." >&2
+    exit 1
+  fi
+}
+
 usage() {
   cat <<'EOF'
 Usage: scripts/bump-version.sh [major|minor|patch]
@@ -107,6 +115,9 @@ ensure_clean_and_synced "$ROOT" "Main repo"
 if [[ -d "$TAP_DIR/.git" ]]; then
   ensure_clean_and_synced "$TAP_DIR" "Tap repo ($TAP_DIR)"
 fi
+
+# Fail fast if integration tests break.
+run_integration_tests
 
 current=$(grep 'Version = "' "$VERSION_FILE" | sed -E 's/.*"([^"]+)".*/\1/')
 if [[ ! "$current" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then

@@ -1,0 +1,2 @@
+requests==2.32.3
+onyx-database==2.0.1

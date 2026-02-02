@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+src/onyx.schema.json
+src/generated/
+onyx/
+venv/
+.venv/

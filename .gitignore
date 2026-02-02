@@ -1,6 +1,8 @@
 # Generated outputs
 gen/
 /onyx/
+/onyx
+/localonyx
 src/main/kotlin/onyx/
 src/main/java/onyx/
 dist/
@@ -10,6 +12,26 @@ onyx-kotlin/
 onyx/*.py
 onyx/__pycache__/
 bin/
+generate.go
+api/onyx.schema.json
+gen-go/
+gen-ts/
+gen-py/
+gen-java/
+gen-kt/
+.e2e-workdir/
+examples/onyx-node/node_modules/
+examples/onyx-node/dist/
+examples/onyx-node/src/onyx.schema.json
+examples/onyx-node/src/types.ts
+examples/onyx-kotlin/.gradle/
+examples/onyx-kotlin/build/
+examples/onyx-kotlin/onyx/
+examples/onyx-kotlin/onyx.schema.json
+examples/onyx-go/onyx/
+examples/onyx-go/onyx.schema.json
+generate.go
+api/onyx.schema.json
 
 # Go build artifacts
 *.exe
@@ -22,4 +44,6 @@ bin/
 .DS_Store
 .idea/
 .vscode/
+.vscode/launch.json
+.vscode/tasks.json
 *~

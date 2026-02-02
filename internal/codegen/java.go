@@ -15,8 +15,12 @@ func RenderJavaTypes(schemaJSON []byte, pkg string, outDir string, overwrite boo
 	if err := json.Unmarshal(schemaJSON, &parsed); err != nil {
 		return fmt.Errorf("parse schema: %w", err)
 	}
-	if len(parsed.Entities) == 0 {
-		return fmt.Errorf("schema has no entities")
+	tables := parsed.Tables
+	if len(tables) == 0 {
+		tables = parsed.Entities
+	}
+	if len(tables) == 0 {
+		return fmt.Errorf("schema has no tables")
 	}
 
 	pkgPath := strings.ReplaceAll(strings.TrimSpace(pkg), ".", string(filepath.Separator))
@@ -29,7 +33,7 @@ func RenderJavaTypes(schemaJSON []byte, pkg string, outDir string, overwrite boo
 		return err
 	}
 
-	for _, ent := range parsed.Entities {
+	for _, ent := range tables {
 		if ent.Name == "" {
 			continue
 		}
@@ -76,7 +80,7 @@ func renderJavaClass(name string, attrs []struct {
 	b.WriteString(name)
 	b.WriteString(" {\n")
 	for _, a := range attrs {
-		jt := mapJavaType(a.Type, a.IsNullable)
+		jt := mapJavaType(a.Type)
 		b.WriteString("  public ")
 		b.WriteString(jt)
 		b.WriteString(" ")
@@ -98,7 +102,7 @@ func renderJavaClass(name string, attrs []struct {
 	return b.String()
 }
 
-func mapJavaType(schemaType string, nullable bool) string {
+func mapJavaType(schemaType string) string {
 	t := strings.ToLower(strings.TrimSpace(schemaType))
 	switch t {
 	case "string", "text", "uuid":
@@ -115,6 +119,8 @@ func mapJavaType(schemaType string, nullable bool) string {
 		return "Object"
 	}
 }
+
+// nullable is currently unused but kept for parity with other generators; may map to Optional types later.
 
 func isJavaTimeType(schemaType string) bool {
 	switch strings.ToLower(strings.TrimSpace(schemaType)) {

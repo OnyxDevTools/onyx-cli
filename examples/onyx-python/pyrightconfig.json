@@ -1,0 +1,9 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "stubPath": "./typings",
+  "extraPaths": [
+    "./",
+    "./onyx"
+  ]
+}

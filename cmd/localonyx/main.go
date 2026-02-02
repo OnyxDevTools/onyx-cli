@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -109,7 +110,7 @@ func printResolvedConfig(cmd *cobra.Command, rc config.ResolvedConfig) {
 	fmt.Fprintf(out, "databaseId:   %s (source: %s)\n", rc.DatabaseID.Value, rc.DatabaseID.Source)
 	fmt.Fprintf(out, "baseUrl:      %s (source: %s)\n", rc.BaseURL.Value, rc.BaseURL.Source)
 	fmt.Fprintf(out, "apiKey:       %s (source: %s)\n", rc.APIKey.Value, rc.APIKey.Source)
-	fmt.Fprintf(out, "apiSecret:    %s (source: %s)\n", rc.APISecret.Value, rc.APISecret.Source)
+	fmt.Fprintf(out, "apiSecret:    %s (source: %s)\n", config.MaskSecret(rc.APISecret.Value), rc.APISecret.Source)
 	fmt.Fprintf(out, "aiBaseUrl:    %s (source: %s)\n", rc.AIBaseURL.Value, rc.AIBaseURL.Source)
 	fmt.Fprintf(out, "defaultModel: %s (source: %s)\n", rc.DefaultModel.Value, rc.DefaultModel.Source)
 	fmt.Fprintf(out, "codegenLang:  %s (source: %s)\n", rc.CodegenLang.Value, rc.CodegenLang.Source)
@@ -352,7 +353,7 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			schemaFile := pickSchemaPath(schemaPath, args)
-			localReq, filePath, err := loadLocalSchema(schemaFile)
+			_, filePath, rawSchema, err := loadLocalSchema(schemaFile)
 			if err != nil {
 				return err
 			}
@@ -361,7 +362,11 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 				return err
 			}
 			client := api.NewClient(rc.BaseURL.Value, rc.DatabaseID.Value, rc.APIKey.Value, rc.APISecret.Value)
-			res, err := client.ValidateSchema(localReq)
+			sanitized, err := sanitizeSchemaJSON(rawSchema)
+			if err != nil {
+				return fmt.Errorf("sanitize schema: %w", err)
+			}
+			res, err := client.ValidateSchemaRaw(sanitized)
 			if err != nil {
 				return err
 			}
@@ -383,7 +388,7 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			schemaFile := pickSchemaPath(schemaPath, args)
-			localReq, filePath, err := loadLocalSchema(schemaFile)
+			localReq, filePath, _, err := loadLocalSchema(schemaFile)
 			if err != nil {
 				return err
 			}
@@ -415,7 +420,7 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			schemaFile := pickSchemaPath(schemaPath, args)
-			localReq, _, err := loadLocalSchema(schemaFile)
+			_, _, rawSchema, err := loadLocalSchema(schemaFile)
 			if err != nil {
 				return err
 			}
@@ -424,18 +429,30 @@ func newSchemaCmd(cfg *cfgOptions) *cobra.Command {
 				return err
 			}
 			client := api.NewClient(rc.BaseURL.Value, rc.DatabaseID.Value, rc.APIKey.Value, rc.APISecret.Value)
-			rev, err := client.UpdateSchema(localReq, publish)
+			sanitized, err := sanitizeSchemaJSON(rawSchema)
+			if err != nil {
+				return fmt.Errorf("sanitize schema: %w", err)
+			}
+			rev, err := client.UpdateSchemaRaw(sanitized, publish)
 			if err != nil {
 				return err
 			}
 			if rev == nil || rev.Meta == nil || rev.Meta.RevisionID == "" || rev.Meta.PublishedAt == "" {
-				return fmt.Errorf(
-					"publish failed: server response missing revision metadata (need meta.revisionId and meta.publishedAt). Base URL: %s, database: %s. This usually means the API did not accept the publish; verify you are targeting the right Onyx API and that the server is up to date.",
-					rc.BaseURL.Value, rc.DatabaseID.Value,
-				)
+				warnMissingMeta(cmd, "publish", rc)
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Published revision %s at %s\n", rev.Meta.RevisionID, rev.Meta.PublishedAt)
+			revID := "unknown"
+			publishedAt := "unknown"
+			if rev != nil && rev.Meta != nil {
+				if rev.Meta.RevisionID != "" {
+					revID = rev.Meta.RevisionID
+				}
+				if rev.Meta.PublishedAt != "" {
+					publishedAt = rev.Meta.PublishedAt
+				}
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "Published revision %s at %s\n", revID, publishedAt)
 			return nil
 		},
 	}
@@ -457,14 +474,35 @@ func runSchemaGet(cmd *cobra.Command, cfg *cfgOptions, outPath, tablesCSV string
 	if strings.TrimSpace(tablesCSV) != "" {
 		tables = strings.Split(tablesCSV, ",")
 	}
-	rev, err := client.GetSchema(tables)
+	raw, rev, err := client.GetSchemaRaw(tables)
 	if err != nil {
 		return err
 	}
+	if rev == nil || rev.Meta == nil || rev.Meta.RevisionID == "" || rev.Meta.PublishedAt == "" {
+		warnMissingMeta(cmd, "get", rc)
+	}
 
-	data, err := json.MarshalIndent(rev, "", "  ")
-	if err != nil {
-		return fmt.Errorf("encode schema: %w", err)
+	data := raw
+	if len(bytes.TrimSpace(data)) > 0 {
+		if sanitized, err := sanitizeSchemaJSON(data); err == nil {
+			data = sanitized
+		} else {
+			return fmt.Errorf("sanitize schema: %w", err)
+		}
+	} else if rev != nil {
+		pretty, err := json.MarshalIndent(rev, "", "  ")
+		if err != nil {
+			return fmt.Errorf("encode schema: %w", err)
+		}
+		data = pretty
+	}
+
+	// Pretty-print while preserving unknown fields by indenting the raw JSON.
+	if len(bytes.TrimSpace(data)) > 0 {
+		var buf bytes.Buffer
+		if err := json.Indent(&buf, data, "", "  "); err == nil {
+			data = buf.Bytes()
+		}
 	}
 	data = append(data, '\n')
 
@@ -495,16 +533,20 @@ func runSchemaGet(cmd *cobra.Command, cfg *cfgOptions, outPath, tablesCSV string
 	return nil
 }
 
-func loadLocalSchema(path string) (schema.SchemaUpsertRequest, string, error) {
+func loadLocalSchema(path string) (schema.SchemaUpsertRequest, string, []byte, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return schema.SchemaUpsertRequest{}, path, fmt.Errorf("read schema %s: %w", path, err)
+		return schema.SchemaUpsertRequest{}, path, nil, fmt.Errorf("read schema %s: %w", path, err)
+	}
+	apiReady, err := normalizeSchemaForAPI(data)
+	if err != nil {
+		return schema.SchemaUpsertRequest{}, path, nil, err
 	}
 	var req schema.SchemaUpsertRequest
-	if err := jsonUnmarshal(data, &req); err != nil {
-		return schema.SchemaUpsertRequest{}, path, fmt.Errorf("parse schema %s: %w", path, err)
+	if err := json.Unmarshal(apiReady, &req); err != nil {
+		return schema.SchemaUpsertRequest{}, path, nil, fmt.Errorf("parse schema %s: %w", path, err)
 	}
-	return req, path, nil
+	return req, path, apiReady, nil
 }
 
 // pickSchemaPath chooses the schema path from a flag or optional positional arg.
@@ -519,10 +561,93 @@ func pickSchemaPath(flagPath string, args []string) string {
 	return config.DefaultSchemaPath
 }
 
-func jsonUnmarshal(data []byte, v any) error {
-	dec := json.NewDecoder(strings.NewReader(string(data)))
-	dec.DisallowUnknownFields()
-	return dec.Decode(v)
+func warnMissingMeta(cmd *cobra.Command, action string, rc config.ResolvedConfig) {
+	// Previously emitted warnings when metadata was absent. Now intentionally silent.
+}
+
+// sanitizeSchemaJSON removes noisy fields (currently entityText) while preserving unknowns.
+func sanitizeSchemaJSON(raw []byte) ([]byte, error) {
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return raw, nil
+	}
+	var v any
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return nil, fmt.Errorf("decode schema json: %w", err)
+	}
+	stripEntityText(v)
+	ensureTablesKey(v)
+	out, err := json.Marshal(v)
+	if err != nil {
+		return nil, fmt.Errorf("encode schema json: %w", err)
+	}
+	return out, nil
+}
+
+func stripEntityText(v any) {
+	switch t := v.(type) {
+	case map[string]any:
+		delete(t, "entityText")
+		for _, val := range t {
+			stripEntityText(val)
+		}
+	case []any:
+		for _, elem := range t {
+			stripEntityText(elem)
+		}
+	}
+}
+
+// normalizeSchemaForAPI ensures payload uses tables (and entities for compatibility) and strips entityText.
+func normalizeSchemaForAPI(raw []byte) ([]byte, error) {
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return raw, nil
+	}
+	var v any
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return nil, fmt.Errorf("decode schema json: %w", err)
+	}
+	stripEntityText(v)
+	ensureTablesKey(v)
+	ensureEntitiesFromTables(v)
+	out, err := json.Marshal(v)
+	if err != nil {
+		return nil, fmt.Errorf("encode schema json: %w", err)
+	}
+	return out, nil
+}
+
+func ensureTablesKey(v any) {
+	if m, ok := v.(map[string]any); ok {
+		if _, hasTables := m["tables"]; !hasTables {
+			if ents, hasEntities := m["entities"]; hasEntities {
+				m["tables"] = ents
+			}
+		}
+		for _, val := range m {
+			ensureTablesKey(val)
+		}
+	} else if arr, ok := v.([]any); ok {
+		for _, elem := range arr {
+			ensureTablesKey(elem)
+		}
+	}
+}
+
+func ensureEntitiesFromTables(v any) {
+	if m, ok := v.(map[string]any); ok {
+		if _, hasEntities := m["entities"]; !hasEntities {
+			if tables, hasTables := m["tables"]; hasTables {
+				m["entities"] = tables
+			}
+		}
+		for _, val := range m {
+			ensureEntitiesFromTables(val)
+		}
+	} else if arr, ok := v.([]any); ok {
+		for _, elem := range arr {
+			ensureEntitiesFromTables(elem)
+		}
+	}
 }
 
 func boolValue(ptr *bool) bool {

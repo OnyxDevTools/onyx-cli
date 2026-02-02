@@ -15,8 +15,12 @@ func RenderPython(schemaJSON []byte, outDir string, overwrite bool) error {
 	if err := json.Unmarshal(schemaJSON, &parsed); err != nil {
 		return fmt.Errorf("parse schema: %w", err)
 	}
-	if len(parsed.Entities) == 0 {
-		return errors.New("schema has no entities")
+	tables := parsed.Tables
+	if len(tables) == 0 {
+		tables = parsed.Entities
+	}
+	if len(tables) == 0 {
+		return errors.New("schema has no tables")
 	}
 
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
@@ -26,7 +30,7 @@ func RenderPython(schemaJSON []byte, outDir string, overwrite bool) error {
 	// models.py
 	var models strings.Builder
 	models.WriteString("import datetime\nfrom typing import Any, Optional\n\n")
-	for _, ent := range parsed.Entities {
+	for _, ent := range tables {
 		if ent.Name == "" {
 			continue
 		}
@@ -63,26 +67,26 @@ func RenderPython(schemaJSON []byte, outDir string, overwrite bool) error {
 	}
 
 	// tables.py
-	var tables strings.Builder
-	tables.WriteString("class tables:\n    \"\"\"Table name constants.\"\"\"\n")
-	for _, ent := range parsed.Entities {
+	var tablesBuf strings.Builder
+	tablesBuf.WriteString("class tables:\n    \"\"\"Table name constants.\"\"\"\n")
+	for _, ent := range tables {
 		if ent.Name == "" {
 			continue
 		}
-		tables.WriteString("    ")
-		tables.WriteString(ent.Name)
-		tables.WriteString(" = \"")
-		tables.WriteString(ent.Name)
-		tables.WriteString("\"\n")
+		tablesBuf.WriteString("    ")
+		tablesBuf.WriteString(ent.Name)
+		tablesBuf.WriteString(" = \"")
+		tablesBuf.WriteString(ent.Name)
+		tablesBuf.WriteString("\"\n")
 	}
-	tables.WriteString("\n")
+	tablesBuf.WriteString("\n")
 	tablesPath := filepath.Join(outDir, "tables.py")
 	if !overwrite {
 		if _, err := os.Stat(tablesPath); err == nil {
 			return fmt.Errorf("%s exists (use --overwrite)", tablesPath)
 		}
 	}
-	if err := os.WriteFile(tablesPath, []byte(tables.String()), 0o644); err != nil {
+	if err := os.WriteFile(tablesPath, []byte(tablesBuf.String()), 0o644); err != nil {
 		return err
 	}
 
@@ -109,8 +113,8 @@ func RenderPython(schemaJSON []byte, outDir string, overwrite bool) error {
 	}
 
 	// __init__.py
-	modelNames := make([]string, 0, len(parsed.Entities))
-	for _, ent := range parsed.Entities {
+	modelNames := make([]string, 0, len(tables))
+	for _, ent := range tables {
 		if strings.TrimSpace(ent.Name) == "" {
 			continue
 		}

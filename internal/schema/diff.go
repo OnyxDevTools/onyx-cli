@@ -7,8 +7,8 @@ import (
 
 // ComputeSchemaDiff compares API schema with local schema.
 func ComputeSchemaDiff(apiSchema SchemaRevision, localSchema SchemaUpsertRequest) SchemaDiff {
-	apiMap := mapByName(apiSchema.Entities)
-	localMap := mapByName(localSchema.Entities)
+	apiMap := mapByName(apiSchema.Tables)
+	localMap := mapByName(localSchema.Tables)
 
 	var newTables, removedTables []string
 	var changedTables []SchemaTableDiff
@@ -41,8 +41,8 @@ func ComputeSchemaDiff(apiSchema SchemaRevision, localSchema SchemaUpsertRequest
 	return SchemaDiff{NewTables: newTables, RemovedTables: removedTables, ChangedTables: changedTables}
 }
 
-func mapByName(items []SchemaEntity) map[string]SchemaEntity {
-	m := make(map[string]SchemaEntity)
+func mapByName(items []SchemaTable) map[string]SchemaTable {
+	m := make(map[string]SchemaTable)
 	for _, it := range items {
 		if it.Name == "" {
 			continue

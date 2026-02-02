@@ -2,9 +2,10 @@ package schema
 
 // SchemaRevision represents a published or latest schema revision.
 type SchemaRevision struct {
-	DatabaseID string         `json:"databaseId"`
-	Entities   []SchemaEntity `json:"entities"`
-	Meta       *SchemaMeta    `json:"meta,omitempty"`
+	DatabaseID string        `json:"databaseId"`
+	Tables     []SchemaTable `json:"tables"`
+	Entities   []SchemaTable `json:"entities,omitempty"` // backwards compatibility
+	Meta       *SchemaMeta   `json:"meta,omitempty"`
 }
 
 type SchemaMeta struct {
@@ -13,7 +14,7 @@ type SchemaMeta struct {
 	PublishedAt string `json:"publishedAt,omitempty"`
 }
 
-type SchemaEntity struct {
+type SchemaTable struct {
 	Name       string            `json:"name"`
 	Partition  string            `json:"partition,omitempty"`
 	Identifier *SchemaIdentifier `json:"identifier,omitempty"`
@@ -22,6 +23,9 @@ type SchemaEntity struct {
 	Resolvers  []SchemaResolver  `json:"resolvers,omitempty"`
 	Triggers   []SchemaTrigger   `json:"triggers,omitempty"`
 }
+
+// Backwards compatibility alias (legacy name was SchemaEntity).
+type SchemaEntity = SchemaTable
 
 type SchemaIdentifier struct {
 	Name      string `json:"name,omitempty"`
@@ -53,9 +57,10 @@ type SchemaTrigger struct {
 }
 
 type SchemaUpsertRequest struct {
-	DatabaseID string         `json:"databaseId,omitempty"`
-	Entities   []SchemaEntity `json:"entities"`
-	Meta       *SchemaMeta    `json:"meta,omitempty"`
+	DatabaseID string        `json:"databaseId,omitempty"`
+	Tables     []SchemaTable `json:"tables"`
+	Entities   []SchemaTable `json:"entities,omitempty"` // backwards compatibility
+	Meta       *SchemaMeta   `json:"meta,omitempty"`
 }
 
 type SchemaValidationResult struct {

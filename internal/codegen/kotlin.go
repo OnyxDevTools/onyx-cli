@@ -13,8 +13,12 @@ func RenderKotlinTypes(schemaJSON []byte, pkg string) (string, error) {
 	if err := json.Unmarshal(schemaJSON, &parsed); err != nil {
 		return "", fmt.Errorf("parse schema: %w", err)
 	}
-	if len(parsed.Entities) == 0 {
-		return "", fmt.Errorf("schema has no entities")
+	tables := parsed.Tables
+	if len(tables) == 0 {
+		tables = parsed.Entities
+	}
+	if len(tables) == 0 {
+		return "", fmt.Errorf("schema has no tables")
 	}
 
 	var b strings.Builder
@@ -27,7 +31,7 @@ func RenderKotlinTypes(schemaJSON []byte, pkg string) (string, error) {
 	}
 
 	needsDate := false
-	for _, ent := range parsed.Entities {
+	for _, ent := range tables {
 		for _, a := range ent.Attributes {
 			if isTimeType(a.Type) {
 				needsDate = true
@@ -39,7 +43,7 @@ func RenderKotlinTypes(schemaJSON []byte, pkg string) (string, error) {
 		b.WriteString("import java.util.Date\n\n")
 	}
 
-	for _, ent := range parsed.Entities {
+	for _, ent := range tables {
 		if ent.Name == "" {
 			continue
 		}
@@ -74,7 +78,7 @@ func RenderKotlinTypes(schemaJSON []byte, pkg string) (string, error) {
 
 	// Tables constants
 	b.WriteString("object Tables {\n")
-	for _, ent := range parsed.Entities {
+	for _, ent := range tables {
 		if ent.Name == "" {
 			continue
 		}

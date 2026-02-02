@@ -1,0 +1,20 @@
+{
+  "name": "onyx-node",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "gen": "go run ../../cmd/onyx schema get --out src/onyx.schema.json && go run ../../cmd/onyx gen --ts --schema src/onyx.schema.json --out src/types.ts --name OnyxSchema",
+    "start": "ts-node src/index.ts",
+    "test:e2e": "npm run gen && ts-node src/cli-e2e.test.ts"
+  },
+  "dependencies": {
+    "@onyx.dev/onyx-database": "^2.1.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

@@ -50,7 +50,11 @@ func (c *Client) request(method, path string, body any) ([]byte, error) {
 		}
 		reader = bytes.NewReader(buf)
 	}
-	req, err := http.NewRequest(method, c.baseURL+path, reader)
+	return c.requestRaw(method, path, reader)
+}
+
+func (c *Client) requestRaw(method, path string, body io.Reader) ([]byte, error) {
+	req, err := http.NewRequest(method, c.baseURL+path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +75,11 @@ func (c *Client) request(method, path string, body any) ([]byte, error) {
 }
 
 func (c *Client) GetSchema(tables []string) (*schema.SchemaRevision, error) {
+	_, rev, err := c.GetSchemaRaw(tables)
+	return rev, err
+}
+
+func (c *Client) GetSchemaRaw(tables []string) ([]byte, *schema.SchemaRevision, error) {
 	var path string
 	if len(tables) > 0 {
 		trimmed := make([]string, 0, len(tables))
@@ -87,26 +96,50 @@ func (c *Client) GetSchema(tables []string) (*schema.SchemaRevision, error) {
 	if path == "" {
 		path = fmt.Sprintf("/schemas/%s", url.PathEscape(c.databaseID))
 	}
-	raw, err := c.request(http.MethodGet, path, nil)
+	raw, err := c.requestRaw(http.MethodGet, path, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var rev schema.SchemaRevision
 	if err := json.Unmarshal(raw, &rev); err != nil {
-		return nil, fmt.Errorf("decode schema: %w", err)
+		return nil, nil, fmt.Errorf("decode schema: %w", err)
+	}
+	// Normalize entities->tables for callers.
+	if len(rev.Tables) == 0 && len(rev.Entities) > 0 {
+		rev.Tables = rev.Entities
+	}
+	if len(rev.Entities) == 0 && len(rev.Tables) > 0 {
+		rev.Entities = rev.Tables
 	}
 	if rev.DatabaseID == "" {
 		rev.DatabaseID = c.databaseID
 	}
-	return &rev, nil
+	return raw, &rev, nil
 }
 
 func (c *Client) ValidateSchema(req schema.SchemaUpsertRequest) (*schema.SchemaValidationResult, error) {
-	if req.DatabaseID == "" {
-		req.DatabaseID = c.databaseID
+	body, err := ensureDatabaseIDRaw(req, c.databaseID)
+	if err != nil {
+		return nil, err
+	}
+	return c.ValidateSchemaRaw(body)
+}
+
+func (c *Client) UpdateSchema(req schema.SchemaUpsertRequest, publish bool) (*schema.SchemaRevision, error) {
+	body, err := ensureDatabaseIDRaw(req, c.databaseID)
+	if err != nil {
+		return nil, err
+	}
+	return c.UpdateSchemaRaw(body, publish)
+}
+
+func (c *Client) ValidateSchemaRaw(body []byte) (*schema.SchemaValidationResult, error) {
+	body, err := ensureDatabaseIDRawBytes(body, c.databaseID)
+	if err != nil {
+		return nil, err
 	}
 	path := fmt.Sprintf("/schemas/%s/validate", url.PathEscape(c.databaseID))
-	raw, err := c.request(http.MethodPost, path, req)
+	raw, err := c.requestRaw(http.MethodPost, path, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -121,9 +154,10 @@ func (c *Client) ValidateSchema(req schema.SchemaUpsertRequest) (*schema.SchemaV
 	return &res, nil
 }
 
-func (c *Client) UpdateSchema(req schema.SchemaUpsertRequest, publish bool) (*schema.SchemaRevision, error) {
-	if req.DatabaseID == "" {
-		req.DatabaseID = c.databaseID
+func (c *Client) UpdateSchemaRaw(body []byte, publish bool) (*schema.SchemaRevision, error) {
+	body, err := ensureDatabaseIDRawBytes(body, c.databaseID)
+	if err != nil {
+		return nil, err
 	}
 	qs := url.Values{}
 	if publish {
@@ -133,7 +167,7 @@ func (c *Client) UpdateSchema(req schema.SchemaUpsertRequest, publish bool) (*sc
 	if q := qs.Encode(); q != "" {
 		path += "?" + q
 	}
-	raw, err := c.request(http.MethodPut, path, req)
+	raw, err := c.requestRaw(http.MethodPut, path, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -145,4 +179,28 @@ func (c *Client) UpdateSchema(req schema.SchemaUpsertRequest, publish bool) (*sc
 		rev.DatabaseID = c.databaseID
 	}
 	return &rev, nil
+}
+
+// ensureDatabaseIDRaw injects the configured database ID when the payload omits it, while preserving all other fields.
+func ensureDatabaseIDRaw(req schema.SchemaUpsertRequest, defaultDB string) ([]byte, error) {
+	raw, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("encode request: %w", err)
+	}
+	return ensureDatabaseIDRawBytes(raw, defaultDB)
+}
+
+func ensureDatabaseIDRawBytes(raw []byte, defaultDB string) ([]byte, error) {
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return nil, fmt.Errorf("decode schema payload: %w", err)
+	}
+	if payload["databaseId"] == nil || payload["databaseId"] == "" {
+		payload["databaseId"] = defaultDB
+	}
+	out, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("encode schema payload: %w", err)
+	}
+	return out, nil
 }
