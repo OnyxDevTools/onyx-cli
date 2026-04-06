@@ -11,8 +11,7 @@ A cross-platform CLI for **Onyx Cloud Database** (onyx.dev) focused on:
 The TypeScript SDK currently provides helper CLIs (`onyx gen` and `onyx schema`). This repo consolidates that developer workflow into a single, globally-installable binary:
 
 - One executable: `onyx`
-- Consistent subcommands across platforms and languages (eventually)
-- Minimal friction for new projects
+- Minimize friction for new projects
 
 ## CLI usage
 
@@ -85,8 +84,7 @@ Shared credential flags (all schema/info commands): `--database-id`, `--base-url
 | `onyx schema info` | *(none)* | Shows resolved config sources, config path, connection check (Schema API ping). |
 
 
-## Credential & config resolution (must match TypeScript)
-This CLI must match the TypeScript SDK’s resolution chain:
+## Credential & config resolution 
 
 **explicit config ➜ environment variables ➜ `ONYX_CONFIG_PATH` file ➜ project config file ➜ home profile**
 
