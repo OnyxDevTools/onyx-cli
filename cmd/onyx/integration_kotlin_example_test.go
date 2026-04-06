@@ -2,8 +2,8 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -50,5 +50,5 @@ func TestExampleKotlinE2E(t *testing.T) {
 	}
 
 	// Run Kotlin example (shim gradlew uses system gradle if installed).
-	runCmd(t, exampleDir, "sh", "gradlew", "-q", "run")
+	runCmd(t, exampleDir, "sh", "./gradlew", "-q", "run")
 }
